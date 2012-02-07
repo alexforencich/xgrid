@@ -42,34 +42,18 @@
 
 // IO pins
 // LEDs
-#define LED_PORT                PORTF
+#define LED_PORT                PORTB
 #define LED_USR_0_PIN           0
 #define LED_USR_1_PIN           1
-#define LED_USR_2_PIN           2
-#define LED_USR_3_PIN           3
-#define LED_USR_4_PIN           4
-#define LED_USR_5_PIN           5
-#define LED_USR_6_PIN           6
-#define LED_USR_7_PIN           7
+#define LED_USR_2_PIN           3
 #define LED_USR_0_PIN_bm        (1 << LED_USR_0_PIN)
 #define LED_USR_1_PIN_bm        (1 << LED_USR_1_PIN)
 #define LED_USR_2_PIN_bm        (1 << LED_USR_2_PIN)
-#define LED_USR_3_PIN_bm        (1 << LED_USR_3_PIN)
-#define LED_USR_4_PIN_bm        (1 << LED_USR_4_PIN)
-#define LED_USR_5_PIN_bm        (1 << LED_USR_5_PIN)
-#define LED_USR_6_PIN_bm        (1 << LED_USR_6_PIN)
-#define LED_USR_7_PIN_bm        (1 << LED_USR_7_PIN)
 
 // Buttons
-#define BTN_PORT                PORTB
+#define BTN_PORT                PORTF
 #define BTN_0_PIN               0
-#define BTN_1_PIN               1
-#define BTN_2_PIN               2
-#define BTN_3_PIN               3
 #define BTN_0_PIN_bm            (1 << BTN_0_PIN)
-#define BTN_1_PIN_bm            (1 << BTN_1_PIN)
-#define BTN_2_PIN_bm            (1 << BTN_2_PIN)
-#define BTN_3_PIN_bm            (1 << BTN_3_PIN)
 
 // SPI Bus
 #define SPI_CS_PORT             PORTD
@@ -83,12 +67,21 @@
 
 // UART
 #define UART_BAUD_RATE          115200
-#define UART_PORT_NAME          C
+#define UART_PORT_NAME          F
 #define UART_NUMBER             0
 #define UART_TX_PIN             3
 #define UART_PORT               token_paste2(PORT, UART_PORT_NAME)
 #define UART_DEVICE_PORT        token_paste2(UART_PORT_NAME, UART_NUMBER)
 #define UART_DEVICE             token_paste2(USART, UART_DEVICE_PORT)
+
+#define USART_N0_DEVICE_PORT    C0
+#define USART_N1_DEVICE_PORT    C1
+#define USART_N2_DEVICE_PORT    D0
+#define USART_N3_DEVICE_PORT    D1
+#define USART_N4_DEVICE_PORT    E0
+#define USART_N5_DEVICE_PORT    E1
+
+#define NODE_BAUD_RATE          115200
 
 // I2C
 #define I2C_DEV                 TWIE

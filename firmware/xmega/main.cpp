@@ -40,6 +40,29 @@ char usart_rxbuf[USART_RX_BUF_SIZE];
 CREATE_USART(usart, UART_DEVICE_PORT);
 FILE usart_stream;
 
+#define NODE_TX_BUF_SIZE 16
+#define NODE_RX_BUF_SIZE 16
+char usart_n0_txbuf[NODE_TX_BUF_SIZE];
+char usart_n0_rxbuf[NODE_RX_BUF_SIZE];
+CREATE_USART(usart_n0, USART_N0_DEVICE_PORT);
+char usart_n1_txbuf[NODE_TX_BUF_SIZE];
+char usart_n1_rxbuf[NODE_RX_BUF_SIZE];
+CREATE_USART(usart_n1, USART_N1_DEVICE_PORT);
+char usart_n2_txbuf[NODE_TX_BUF_SIZE];
+char usart_n2_rxbuf[NODE_RX_BUF_SIZE];
+CREATE_USART(usart_n2, USART_N2_DEVICE_PORT);
+char usart_n3_txbuf[NODE_TX_BUF_SIZE];
+char usart_n3_rxbuf[NODE_RX_BUF_SIZE];
+CREATE_USART(usart_n3, USART_N3_DEVICE_PORT);
+char usart_n4_txbuf[NODE_TX_BUF_SIZE];
+char usart_n4_rxbuf[NODE_RX_BUF_SIZE];
+CREATE_USART(usart_n4, USART_N4_DEVICE_PORT);
+char usart_n5_txbuf[NODE_TX_BUF_SIZE];
+char usart_n5_rxbuf[NODE_RX_BUF_SIZE];
+CREATE_USART(usart_n5, USART_N5_DEVICE_PORT);
+
+Usart *usart_n[6];
+
 // SPI
 
 Spi spi(&SPI_DEV);
@@ -98,16 +121,39 @@ void init(void)
         MCU.MCUCR = 1;
         
         // Init pins
-        LED_PORT.OUTCLR = LED_USR_0_PIN_bm | LED_USR_1_PIN_bm | LED_USR_2_PIN_bm | LED_USR_3_PIN_bm |
-                LED_USR_4_PIN_bm | LED_USR_5_PIN_bm | LED_USR_6_PIN_bm | LED_USR_7_PIN_bm;
-        LED_PORT.DIRSET = LED_USR_0_PIN_bm | LED_USR_1_PIN_bm | LED_USR_2_PIN_bm | LED_USR_3_PIN_bm |
-                LED_USR_4_PIN_bm | LED_USR_5_PIN_bm | LED_USR_6_PIN_bm | LED_USR_7_PIN_bm;
+        LED_PORT.OUTCLR = LED_USR_0_PIN_bm | LED_USR_1_PIN_bm | LED_USR_2_PIN_bm;
+        LED_PORT.DIRSET = LED_USR_0_PIN_bm | LED_USR_1_PIN_bm | LED_USR_2_PIN_bm;
         
         // UARTs
         usart.set_tx_buffer(usart_txbuf, USART_TX_BUF_SIZE);
         usart.set_rx_buffer(usart_rxbuf, USART_RX_BUF_SIZE);
         usart.begin(UART_BAUD_RATE);
         usart.setup_stream(&usart_stream);
+        
+        usart_n0.set_tx_buffer(usart_n0_txbuf, NODE_TX_BUF_SIZE);
+        usart_n0.set_rx_buffer(usart_n0_rxbuf, NODE_RX_BUF_SIZE);
+        usart_n0.begin(NODE_BAUD_RATE);
+        usart_n[0] = &usart_n0;
+        usart_n1.set_tx_buffer(usart_n1_txbuf, NODE_TX_BUF_SIZE);
+        usart_n1.set_rx_buffer(usart_n1_rxbuf, NODE_RX_BUF_SIZE);
+        usart_n1.begin(NODE_BAUD_RATE);
+        usart_n[1] = &usart_n1;
+        usart_n2.set_tx_buffer(usart_n2_txbuf, NODE_TX_BUF_SIZE);
+        usart_n2.set_rx_buffer(usart_n2_rxbuf, NODE_RX_BUF_SIZE);
+        usart_n2.begin(NODE_BAUD_RATE);
+        usart_n[2] = &usart_n2;
+        usart_n3.set_tx_buffer(usart_n3_txbuf, NODE_TX_BUF_SIZE);
+        usart_n3.set_rx_buffer(usart_n3_rxbuf, NODE_RX_BUF_SIZE);
+        usart_n3.begin(NODE_BAUD_RATE);
+        usart_n[3] = &usart_n3;
+        usart_n4.set_tx_buffer(usart_n4_txbuf, NODE_TX_BUF_SIZE);
+        usart_n4.set_rx_buffer(usart_n4_rxbuf, NODE_RX_BUF_SIZE);
+        usart_n4.begin(NODE_BAUD_RATE);
+        usart_n[4] = &usart_n4;
+        usart_n5.set_tx_buffer(usart_n5_txbuf, NODE_TX_BUF_SIZE);
+        usart_n5.set_rx_buffer(usart_n5_rxbuf, NODE_RX_BUF_SIZE);
+        usart_n5.begin(NODE_BAUD_RATE);
+        usart_n[5] = &usart_n5;
         
         // ADC setup
         ADCA.CTRLA = ADC_DMASEL_OFF_gc | ADC_FLUSH_bm;
@@ -180,9 +226,7 @@ int main(void)
         
         LED_PORT.OUT = 0x01;
         
-        usart.write_string("Hello World\n");
-        
-        fprintf_P(&usart_stream, PSTR("x = %d"), 5);
+        usart.write_string("avr-xgrid start\n");
         
         while (1)
         {
