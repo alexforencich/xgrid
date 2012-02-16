@@ -276,11 +276,6 @@ int main(void)
                         LED_PORT.OUTTGL = LED_USR_1_PIN_bm;
                 }
                 
-                //if (btn && (btn != old_btn))
-                //        LED_PORT.OUTSET = LED_USR_1_PIN_bm;
-                //else if (!btn)
-                //        LED_PORT.OUTCLR = LED_USR_1_PIN_bm;
-                
                 old_btn = btn;
                 
                 j = jiffies + 10;
