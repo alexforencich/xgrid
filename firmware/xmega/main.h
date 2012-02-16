@@ -45,6 +45,7 @@
 #include "spi.h"
 #include "i2c.h"
 #include "eeprom.h"
+#include "xgrid.h"
 
 // defines
 

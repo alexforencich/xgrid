@@ -163,6 +163,7 @@ TARGET = main
 # List C source files here. (C dependencies are automatically generated.)
 SRC = $(TARGET).cpp
 SRC += usart.cpp spi.cpp i2c.cpp eeprom.cpp istream.cpp ostream.cpp iostream.cpp
+SRC += xgrid.cpp
 # SRC += ...
 
 # List Assembler source files here.
