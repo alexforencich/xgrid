@@ -52,8 +52,8 @@
 
 // Buttons
 #define BTN_PORT                PORTF
-#define BTN_0_PIN               0
-#define BTN_0_PIN_bm            (1 << BTN_0_PIN)
+#define BTN_PIN                 0
+#define BTN_PIN_bm              (1 << BTN_PIN)
 
 // SPI Bus
 #define SPI_CS_PORT             PORTD
