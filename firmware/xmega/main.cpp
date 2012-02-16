@@ -124,6 +124,9 @@ void init(void)
         LED_PORT.OUTCLR = LED_USR_0_PIN_bm | LED_USR_1_PIN_bm | LED_USR_2_PIN_bm;
         LED_PORT.DIRSET = LED_USR_0_PIN_bm | LED_USR_1_PIN_bm | LED_USR_2_PIN_bm;
         
+        // Init buttons
+        BTN_PORT.DIRCLR = BTN_PIN_bm;
+        
         // UARTs
         usart.set_tx_buffer(usart_txbuf, USART_TX_BUF_SIZE);
         usart.set_rx_buffer(usart_rxbuf, USART_RX_BUF_SIZE);
@@ -203,14 +206,14 @@ void init(void)
         //EVSYS.CH0CTRL = 0;
         
         // I2C
-        i2c.begin(400000L);
+        //i2c.begin(400000L);
         
         // SPI
-        spi.begin(SPI_MODE_2_gc, SPI_PRESCALER_DIV4_gc, 1);
+        //spi.begin(SPI_MODE_2_gc, SPI_PRESCALER_DIV4_gc, 1);
         
         // CS line
-        SPI_CS_PORT.OUTSET = SPI_CS_DEV_PIN_bm;
-        SPI_CS_PORT.DIRSET = SPI_CS_DEV_PIN_bm;
+        //SPI_CS_PORT.OUTSET = SPI_CS_DEV_PIN_bm;
+        //SPI_CS_PORT.DIRSET = SPI_CS_DEV_PIN_bm;
         
         // Interrupts
         PMIC.CTRL = PMIC_LOLVLEN_bm | PMIC_MEDLVLEN_bm;
