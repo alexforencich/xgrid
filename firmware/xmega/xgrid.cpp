@@ -137,6 +137,7 @@ void Xgrid::send_packet(Packet *pkt, uint16_t mask)
 {
         pkt->source_id = my_id;
         pkt->seq = cur_seq++;
+        pkt->rx_node = 0xFF;
         
         send_raw_packet(pkt, mask);
 }
@@ -259,7 +260,10 @@ void Xgrid::process_packet(Packet *pkt)
                 if (pkt->radius > 1)
                 {
                         pkt->radius--;
-                        send_raw_packet(pkt, 0xFFFF & (1 << pkt->rx_node));
+                        uint16_t mask = 0xFFFF;
+                        if (pkt->rx_node < 16)
+                                mask &= ~(1 << pkt->rx_node);
+                        send_raw_packet(pkt, mask);
                         pkt->radius++;
                 }
                 
