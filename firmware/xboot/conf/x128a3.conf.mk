@@ -161,6 +161,7 @@ LED_INV               = 1
 UART_BAUD_RATE        = 115200
 UART_PORT_NAME        = F
 UART_NUMBER           = 0
+UART_RX_PUEN          = yes
 
 # UART RS485 Enable Output
 UART_EN_PORT_NAME     = C
