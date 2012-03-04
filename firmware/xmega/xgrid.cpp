@@ -77,7 +77,7 @@ int8_t Xgrid::add_node(IOStream *stream)
 {
         if (node_cnt < XGRID_MAX_NODES)
         {
-                nodes[node_cnt] = stream;
+                nodes[node_cnt].stream = stream;
                 return node_cnt++;
         }
         
@@ -161,7 +161,7 @@ void Xgrid::send_raw_packet(Packet *pkt, uint16_t mask)
         {
                 if (mask & (1 << i))
                 {
-                        nodes[i]->write(buffer, len);
+                        nodes[i].stream->write(buffer, len);
                 }
         }
 }
@@ -242,7 +242,7 @@ void Xgrid::process()
         for (uint8_t i = 0; i < node_cnt; i++)
         {
                 pkt.data = buffer;
-                ret = try_read_packet(&pkt, nodes[i]);
+                ret = try_read_packet(&pkt, nodes[i].stream);
                 
                 if (ret)
                 {

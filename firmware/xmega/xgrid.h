@@ -99,11 +99,16 @@ private:
                 uint8_t seq;
         } __attribute__ ((__packed__)) xgrid_header_minimal_t;
         
+        typedef struct
+        {
+                IOStream *stream;
+        } xgrid_node_t;
+        
         // Per object data
         uint16_t my_id;
         uint8_t cur_seq;
         
-        IOStream *nodes[XGRID_MAX_NODES];
+        xgrid_node_t nodes[XGRID_MAX_NODES];
         int8_t node_cnt;
         
         xgrid_header_minimal_t compare_buffer[XGRID_COMPARE_BUFFER_SIZE];
