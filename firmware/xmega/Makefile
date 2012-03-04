@@ -164,6 +164,7 @@ TARGET = main
 SRC = $(TARGET).cpp
 SRC += usart.cpp spi.cpp i2c.cpp eeprom.cpp istream.cpp ostream.cpp iostream.cpp
 SRC += xgrid.cpp
+SRC += ../xboot/xbootapi.c
 # SRC += ...
 
 # List Assembler source files here.

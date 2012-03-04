@@ -36,6 +36,7 @@
 #include <avr/interrupt.h>
 
 #include "iostream.h"
+#include "../xboot/xbootapi.h"
 
 // defines
 #define XGRID_MAX_NODES 8
