@@ -277,32 +277,88 @@ uint8_t Xgrid::try_parse_packet(Packet *pkt, const uint8_t *buffer, uint16_t len
 void Xgrid::process()
 {
         Packet pkt;
-        uint8_t buffer[XGRID_BUFFER_SIZE];
-        
-        uint8_t ret;
         
         // process nodes
         for (uint8_t i = 0; i < node_cnt; i++)
         {
+                IOStream *stream = nodes[i].stream;
+                
                 // drop chars if necessary
                 // for discarding duplicate packets
-                while (nodes[i].drop_chars > 0 && nodes[i].stream->available())
+                while (nodes[i].drop_chars > 0 && stream->available())
                 {
-                        nodes[i].stream->get();
+                        stream->get();
                         nodes[i].drop_chars--;
                 }
                 
-                pkt.data = buffer;
-                ret = try_read_packet(&pkt, nodes[i].stream);
-                
-                if (ret)
+                if (nodes[i].stream->available())
                 {
-                        pkt.rx_node = i;
-                        process_packet(&pkt);
+                        // Process receive data
+                        if (nodes[i].rx_buffer == -1)
+                        {
+                                uint16_t len;
+                                
+                                // drop chars to get to identifier
+                                while (stream->available() > 0 && stream->peek() != XGRID_IDENTIFIER)
+                                        stream->get();
+                                
+                                // continue if we're not looking at a packet
+                                if (stream->peek() != XGRID_IDENTIFIER)
+                                        continue;
+                                
+                                // grab length
+                                if (stream->available() < 3)
+                                        continue;
+                                
+                                len = stream->peek(1) | (stream->peek(2) << 8);
+                                
+                                int8_t bi = get_free_buffer(len);
+                                
+                                if (bi < 0)
+                                        continue;
+                                
+                                nodes[i].rx_buffer = bi;
+                                
+                                pkt_buffer[bi].flags |= XGRID_BUFFER_IN_USE_RX;
+                                pkt_buffer[bi].ptr = 0;
+                        }
+                        
+                        xgrid_buffer_t *buffer = &(pkt_buffer[nodes[i].rx_buffer]);
+                        
+                        // header
+                        while (buffer->ptr < sizeof(xgrid_header_t) && nodes[i].stream->available())
+                        {
+                                ((uint8_t *)&(buffer->hdr))[buffer->ptr++] = nodes[i].stream->get();
+                        }
+                        
+                        // data
+                        while (buffer->ptr < buffer->hdr.size+3 && nodes[i].stream->available())
+                        {
+                                buffer->buffer[buffer->ptr++ - sizeof(xgrid_header_t)] = nodes[i].stream->get();
+                        }
+                        
+                        // are we done?
+                        if (buffer->ptr >= buffer->hdr.size+3)
+                        {
+                                pkt.source_id = buffer->hdr.source_id;
+                                pkt.type = buffer->hdr.type;
+                                pkt.seq = buffer->hdr.seq;
+                                pkt.flags = buffer->hdr.flags;
+                                pkt.radius = buffer->hdr.radius;
+                                pkt.rx_node = i;
+                                
+                                pkt.data = buffer->buffer;
+                                pkt.data_len = buffer->hdr.size - sizeof(xgrid_header_short_t);
+                                
+                                process_packet(&pkt);
+                                
+                                buffer->flags &= ~ XGRID_BUFFER_IN_USE;
+                                nodes[i].rx_buffer = -1;
+                        }
                 }
         }
         
-        // process buffers
+        // process transmit buffers
         for (uint8_t i = 0; i < XGRID_BUFFER_COUNT; i++)
         {
                 xgrid_buffer_t *buffer = &(pkt_buffer[i]);
@@ -380,10 +436,6 @@ void Xgrid::process()
                                         }
                                 }
                         }
-                }
-                else if (buffer->flags & XGRID_BUFFER_IN_USE_RX)
-                {
-                        // TODO
                 }
         }
 }
