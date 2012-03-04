@@ -257,6 +257,8 @@ int main(void)
         while (1)
         {
                 // main loop
+                if (usart.available() && usart.get() == 0x1b)
+                        xboot_reset();
                 
                 // check for button press
                 btn = !(BTN_PORT.IN & BTN_PIN_bm);
