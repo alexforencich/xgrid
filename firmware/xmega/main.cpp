@@ -252,7 +252,7 @@ int main(void)
         
         LED_PORT.OUT = LED_USR_0_PIN_bm;
         
-        usart.write_string("avr-xgrid start\n");
+        fprintf_P(&usart_stream, PSTR("avr-xgrid build %ld\n"), (unsigned long) &__BUILD_NUMBER);
         
         while (1)
         {

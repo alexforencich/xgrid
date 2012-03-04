@@ -48,6 +48,10 @@
 #include "xgrid.h"
 #include "../xboot/xbootapi.h"
 
+// Build information
+extern char   __BUILD_DATE;
+extern char   __BUILD_NUMBER;
+
 // defines
 
 // typedefs

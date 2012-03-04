@@ -38,6 +38,10 @@
 #include "iostream.h"
 #include "../xboot/xbootapi.h"
 
+// Build information
+extern char   __BUILD_DATE;
+extern char   __BUILD_NUMBER;
+
 // defines
 #define XGRID_MAX_NODES 8
 #define XGRID_COMPARE_BUFFER_SIZE 16

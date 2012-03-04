@@ -285,6 +285,11 @@ MATH_LIB = -lm
 
 EXTMEMOPTS =
 
+# Build number support
+BUILD_NUMBER_FILE=buildnum.txt
+BUILD_NUMBER_LDFLAGS  = -Xlinker --defsym -Xlinker __BUILD_DATE=$$(date +'%Y%m%d')
+BUILD_NUMBER_LDFLAGS += -Xlinker --defsym -Xlinker __BUILD_NUMBER=$$(cat $(BUILD_NUMBER_FILE))
+
 # Linker flags.
 #  -Wl,...:     tell GCC to pass this to linker.
 #    -Map:      create map file
@@ -293,6 +298,7 @@ LDFLAGS = -Wl,-Map=$(TARGET).map,--cref
 LDFLAGS += -Wl,--gc-sections
 LDFLAGS += $(EXTMEMOPTS)
 LDFLAGS += $(PRINTF_LIB) $(SCANF_LIB) $(MATH_LIB)
+LDFLAGS += $(BUILD_NUMBER_LDFLAGS)
 
 # Programming support using avrdude. Settings and variables.
 ifeq ($(OVERRIDE_AVRDUDE_PROGRAMMER),)
@@ -766,6 +772,11 @@ sym: $(TARGET).sym
 	cp $@ config.mk
 	$(MAKE)
 
+# Build numbering
+$(BUILD_NUMBER_FILE): $(OBJ)
+	@if ! test -f $(BUILD_NUMBER_FILE); then echo 0 > $(BUILD_NUMBER_FILE); fi
+	@echo $$(($$(cat $(BUILD_NUMBER_FILE)) + 1)) > $(BUILD_NUMBER_FILE)
+
 -include config.h.mk
 
 # Eye candy.
@@ -862,7 +873,7 @@ extcoff: $(TARGET).elf
 # Link: create ELF output file from object files.
 .SECONDARY : $(TARGET).elf
 .PRECIOUS : $(OBJ)
-%.elf: $(CONFIG_H) $(OBJ)
+%.elf: $(CONFIG_H) $(OBJ) $(BUILD_NUMBER_FILE)
 	@echo
 	@echo $(MSG_LINKING) $@
 	$(CC) $(ALL_CFLAGS) $(OBJ) --output $@ $(LDFLAGS)
