@@ -62,6 +62,9 @@ Xgrid::Xgrid() :
                 pkt_buffer[XGRID_SM_BUFFER_COUNT+i].flags = 0;
         }
         
+        // calculate local id
+        // simply crc of user sig row
+        // likely to be unique and constant for each chip
         NVM_CMD = NVM_CMD_READ_CALIB_ROW_gc;
         
         for (uint32_t i = 0x08; i <= 0x15; i++)
@@ -320,25 +323,20 @@ void Xgrid::process()
                                 nodes[i].rx_buffer = bi;
                                 
                                 pkt_buffer[bi].flags |= XGRID_BUFFER_IN_USE_RX;
+                                pkt_buffer[bi].flags &= ~XGRID_BUFFER_UNIQUE;
                                 pkt_buffer[bi].ptr = 0;
                         }
                         
                         xgrid_buffer_t *buffer = &(pkt_buffer[nodes[i].rx_buffer]);
                         
-                        // header
+                        // read header
                         while (buffer->ptr < sizeof(xgrid_header_t) && nodes[i].stream->available())
                         {
                                 ((uint8_t *)&(buffer->hdr))[buffer->ptr++] = nodes[i].stream->get();
                         }
                         
-                        // data
-                        while (buffer->ptr < buffer->hdr.size+3 && nodes[i].stream->available())
-                        {
-                                buffer->buffer[buffer->ptr++ - sizeof(xgrid_header_t)] = nodes[i].stream->get();
-                        }
-                        
-                        // are we done?
-                        if (buffer->ptr >= buffer->hdr.size+3)
+                        // grab header
+                        if (buffer->ptr >= sizeof(xgrid_header_t))
                         {
                                 pkt.source_id = buffer->hdr.source_id;
                                 pkt.type = buffer->hdr.type;
@@ -347,12 +345,58 @@ void Xgrid::process()
                                 pkt.radius = buffer->hdr.radius;
                                 pkt.rx_node = i;
                                 
+                                // is packet unique?
+                                if (!(buffer->flags & XGRID_BUFFER_UNIQUE))
+                                {
+                                        if (check_unique(&pkt))
+                                        {
+                                                buffer->flags |= XGRID_BUFFER_UNIQUE;
+                                        }
+                                        else
+                                        {
+                                                // drop remainder
+                                                nodes[i].drop_chars = (buffer->hdr.size+3) - buffer->ptr;
+                                                
+                                                // release buffer
+                                                buffer->flags &= ~ XGRID_BUFFER_IN_USE;
+                                                nodes[i].rx_buffer = -1;
+                                                
+                                                continue;
+                                        }
+                                }
+                        }
+                        
+                        // read data
+                        while (buffer->ptr < buffer->hdr.size+3 && nodes[i].stream->available())
+                        {
+                                buffer->buffer[buffer->ptr++ - sizeof(xgrid_header_t)] = nodes[i].stream->get();
+                        }
+                        
+                        // are we done?
+                        if (buffer->ptr >= buffer->hdr.size+3)
+                        {
+                                // set up data reference
                                 pkt.data = buffer->buffer;
                                 pkt.data_len = buffer->hdr.size - sizeof(xgrid_header_short_t);
                                 
-                                process_packet(&pkt);
+                                // process packet
+                                if (pkt.radius > 1)
+                                {
+                                        uint16_t mask = 0xFFFF;
+                                        if (pkt.rx_node < 16)
+                                                mask &= ~(1 << pkt.rx_node);
+                                        
+                                        buffer->hdr.radius--;
+                                        buffer->mask = mask;
+                                        buffer->flags |= XGRID_BUFFER_IN_USE_TX;
+                                        buffer->ptr = 0;
+                                }
                                 
-                                buffer->flags &= ~ XGRID_BUFFER_IN_USE;
+                                if (rx_pkt)
+                                        (*rx_pkt)(&pkt);
+                                
+                                // release buffer
+                                buffer->flags &= ~ XGRID_BUFFER_IN_USE_RX;
                                 nodes[i].rx_buffer = -1;
                         }
                 }
