@@ -47,6 +47,21 @@ Xgrid::Xgrid() :
         // zero compare buffer
         memset(compare_buffer, 0, sizeof(xgrid_header_minimal_t) * XGRID_COMPARE_BUFFER_SIZE);
         
+        // init packet buffers
+        for (int i = 0; i < XGRID_SM_BUFFER_COUNT; i++)
+        {
+                pkt_buffer[i].buffer = pkt_buffer_sm[i];
+                pkt_buffer[i].buffer_len = XGRID_SM_BUFFER_SIZE;
+                pkt_buffer[i].flags = 0;
+        }
+        
+        for (int i = 0; i < XGRID_LG_BUFFER_COUNT; i++)
+        {
+                pkt_buffer[XGRID_SM_BUFFER_COUNT+i].buffer = pkt_buffer_lg[i];
+                pkt_buffer[XGRID_SM_BUFFER_COUNT+i].buffer_len = XGRID_LG_BUFFER_SIZE;
+                pkt_buffer[XGRID_SM_BUFFER_COUNT+i].flags = 0;
+        }
+        
         NVM_CMD = NVM_CMD_READ_CALIB_ROW_gc;
         
         for (uint32_t i = 0x08; i <= 0x15; i++)
@@ -78,6 +93,9 @@ int8_t Xgrid::add_node(IOStream *stream)
         if (node_cnt < XGRID_MAX_NODES)
         {
                 nodes[node_cnt].stream = stream;
+                nodes[node_cnt].tx_buffer = -1;
+                nodes[node_cnt].rx_buffer = -1;
+                nodes[node_cnt].drop_chars = 0;
                 return node_cnt++;
         }
         
@@ -90,7 +108,7 @@ void Xgrid::populate_packet(Packet *pkt, uint8_t *buffer)
         xgrid_header_t *hdr = (xgrid_header_t *)buffer;
         
         hdr->identifier = XGRID_IDENTIFIER;
-        hdr->size = pkt->data_len + 6;
+        hdr->size = pkt->data_len + sizeof(xgrid_header_short_t);
         hdr->source_id = pkt->source_id;
         hdr->type = pkt->type;
         hdr->seq = pkt->seq;
@@ -133,6 +151,17 @@ uint8_t Xgrid::check_unique(Packet *pkt)
 }
 
 
+int8_t Xgrid::get_free_buffer(uint16_t data_size)
+{
+        for (int i = 0; i < XGRID_BUFFER_COUNT; i++)
+        {
+                if ((pkt_buffer[i].flags & XGRID_BUFFER_IN_USE) == 0 && pkt_buffer[i].buffer_len >= data_size)
+                        return i;
+        }
+        return -1;
+}
+
+
 void Xgrid::send_packet(Packet *pkt, uint16_t mask)
 {
         pkt->source_id = my_id;
@@ -145,25 +174,38 @@ void Xgrid::send_packet(Packet *pkt, uint16_t mask)
 
 void Xgrid::send_raw_packet(Packet *pkt, uint16_t mask)
 {
-        uint8_t buffer[XGRID_BUFFER_SIZE];
-        uint16_t len = pkt->data_len;
+        // get buffer index
+        int8_t bi = get_free_buffer(pkt->data_len);
         
-        populate_packet(pkt, buffer);
+        if (bi < 0)
+                return;
         
-        for (uint16_t i = 0; i < len; i++)
+        xgrid_buffer_t *buffer = &(pkt_buffer[bi]);
+        
+        // flag it for use
+        buffer->flags |= XGRID_BUFFER_IN_USE_TX;
+        
+        xgrid_header_t *hdr = &(buffer->hdr);
+        
+        // packet header information
+        hdr->identifier = XGRID_IDENTIFIER;
+        hdr->size = pkt->data_len + sizeof(xgrid_header_short_t);
+        hdr->source_id = pkt->source_id;
+        hdr->type = pkt->type;
+        hdr->seq = pkt->seq;
+        hdr->flags = pkt->flags;
+        hdr->radius = pkt->radius;
+        
+        buffer->mask = mask;
+        
+        // copy in data
+        for (uint16_t i = 0; i < pkt->data_len; i++)
         {
-                buffer[i + sizeof(xgrid_header_t)] = pkt->data[i];
+                buffer->buffer[i] = pkt->data[i];
         }
         
-        len += sizeof(xgrid_header_t);
-        
-        for (uint8_t i = 0; i < node_cnt; i++)
-        {
-                if (mask & (1 << i))
-                {
-                        nodes[i].stream->write(buffer, len);
-                }
-        }
+        // start at zero
+        buffer->ptr = 0;
 }
 
 
@@ -239,8 +281,17 @@ void Xgrid::process()
         
         uint8_t ret;
         
+        // process nodes
         for (uint8_t i = 0; i < node_cnt; i++)
         {
+                // drop chars if necessary
+                // for discarding duplicate packets
+                while (nodes[i].drop_chars > 0 && nodes[i].stream->available())
+                {
+                        nodes[i].stream->get();
+                        nodes[i].drop_chars--;
+                }
+                
                 pkt.data = buffer;
                 ret = try_read_packet(&pkt, nodes[i].stream);
                 
@@ -248,6 +299,91 @@ void Xgrid::process()
                 {
                         pkt.rx_node = i;
                         process_packet(&pkt);
+                }
+        }
+        
+        // process buffers
+        for (uint8_t i = 0; i < XGRID_BUFFER_COUNT; i++)
+        {
+                xgrid_buffer_t *buffer = &(pkt_buffer[i]);
+                
+                if (buffer->flags & XGRID_BUFFER_IN_USE_TX)
+                {
+                        // process for transmit buffer
+                        
+                        // find minimum free
+                        uint16_t f = 0xffff;
+                        
+                        for (uint8_t n = 0; n < node_cnt; n++)
+                        {
+                                if (buffer->mask & (1 << n))
+                                {
+                                        // check node buffer assignment
+                                        if (nodes[n].tx_buffer == -1)
+                                        {
+                                                // if not assigned, set
+                                                nodes[n].tx_buffer = i;
+                                        }
+                                        else if (nodes[n].tx_buffer != i)
+                                        {
+                                                // if assigned to different buffer, hold packet
+                                                f = 0;
+                                        }
+                                        
+                                        uint16_t f2 = nodes[n].stream->free();
+                                        if (f > f2)
+                                                f = f2;
+                                }
+                        }
+                        
+                        // send as much of packet as possible
+                        for (uint8_t n = 0; n < node_cnt; n++)
+                        {
+                                if (buffer->mask & (1 << n))
+                                {
+                                        uint16_t cnt = f;
+                                        uint16_t ptr = buffer->ptr;
+                                        
+                                        // header
+                                        while (cnt > 0 && ptr < sizeof(xgrid_header_t))
+                                        {
+                                                nodes[n].stream->put(((uint8_t *)&(buffer->hdr))[ptr]);
+                                                ptr++;
+                                                cnt--;
+                                        }
+                                        
+                                        // data
+                                        while (cnt > 0 && ptr < buffer->hdr.size+3)
+                                        {
+                                                nodes[n].stream->put(buffer->buffer[ptr-sizeof(xgrid_header_t)]);
+                                                ptr++;
+                                                cnt--;
+                                        }
+                                        
+                                }
+                        }
+                        
+                        buffer->ptr += f;
+                        
+                        // are we done?
+                        if (buffer->ptr >= buffer->hdr.size+3)
+                        {
+                                // turn off flag
+                                buffer->flags &= ~XGRID_BUFFER_IN_USE;
+                                
+                                // remove buffer assigments
+                                for (uint8_t n = 0; n < node_cnt; n++)
+                                {
+                                        if (buffer->mask & (1 << n))
+                                        {
+                                                nodes[n].tx_buffer = -1;
+                                        }
+                                }
+                        }
+                }
+                else if (buffer->flags & XGRID_BUFFER_IN_USE_RX)
+                {
+                        // TODO
                 }
         }
 }

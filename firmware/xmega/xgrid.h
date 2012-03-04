@@ -43,6 +43,16 @@
 #define XGRID_COMPARE_BUFFER_SIZE 16
 #define XGRID_BUFFER_SIZE 64
 
+#define XGRID_SM_BUFFER_COUNT   4
+#define XGRID_SM_BUFFER_SIZE    64
+#define XGRID_LG_BUFFER_COUNT   2
+#define XGRID_LG_BUFFER_SIZE    512
+#define XGRID_BUFFER_COUNT      (XGRID_SM_BUFFER_COUNT + XGRID_LG_BUFFER_COUNT)
+
+#define XGRID_BUFFER_IN_USE     0x03
+#define XGRID_BUFFER_IN_USE_TX  0x01
+#define XGRID_BUFFER_IN_USE_RX  0x02
+
 #define XGRID_IDENTIFIER 0x5A
 #define XGRID_ESCAPE 0x55
 
@@ -103,17 +113,37 @@ private:
         typedef struct
         {
                 IOStream *stream;
+                int8_t rx_buffer;
+                int8_t tx_buffer;
+                uint16_t drop_chars;
         } xgrid_node_t;
+        
+        typedef struct
+        {
+                xgrid_header_t hdr;
+                uint8_t *buffer;
+                uint16_t buffer_len;
+                uint16_t ptr;
+                uint16_t mask;
+                uint8_t flags;
+        } xgrid_buffer_t;
         
         // Per object data
         uint16_t my_id;
         uint8_t cur_seq;
         
+        // node list
         xgrid_node_t nodes[XGRID_MAX_NODES];
         int8_t node_cnt;
         
+        // compare buffer
         xgrid_header_minimal_t compare_buffer[XGRID_COMPARE_BUFFER_SIZE];
         int8_t compare_buffer_ptr;
+        
+        // transmit and receive packet buffers
+        uint8_t pkt_buffer_sm[XGRID_SM_BUFFER_COUNT][XGRID_SM_BUFFER_SIZE];
+        uint8_t pkt_buffer_lg[XGRID_LG_BUFFER_COUNT][XGRID_LG_BUFFER_SIZE];
+        xgrid_buffer_t pkt_buffer[XGRID_BUFFER_COUNT];
         
         // Static data
         
@@ -121,6 +151,7 @@ private:
         void populate_packet(Packet *pkt, uint8_t *buffer);
         uint8_t is_unique(Packet *pkt);
         uint8_t check_unique(Packet *pkt);
+        int8_t get_free_buffer(uint16_t data_size);
         
         // Private static methods
         

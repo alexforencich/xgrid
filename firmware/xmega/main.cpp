@@ -40,7 +40,7 @@ char usart_rxbuf[USART_RX_BUF_SIZE];
 CREATE_USART(usart, UART_DEVICE_PORT);
 FILE usart_stream;
 
-#define NODE_TX_BUF_SIZE 64
+#define NODE_TX_BUF_SIZE 32
 #define NODE_RX_BUF_SIZE 64
 char usart_n0_txbuf[NODE_TX_BUF_SIZE];
 char usart_n0_rxbuf[NODE_RX_BUF_SIZE];
