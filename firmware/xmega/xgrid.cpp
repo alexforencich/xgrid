@@ -177,11 +177,17 @@ void Xgrid::send_packet(Packet *pkt, uint16_t mask)
 
 void Xgrid::send_raw_packet(Packet *pkt, uint16_t mask)
 {
+        uint8_t saved_status = SREG;
+        cli();
+        
         // get buffer index
         int8_t bi = get_free_buffer(pkt->data_len);
         
         if (bi < 0)
+        {
+                SREG = saved_status;
                 return;
+        }
         
         xgrid_buffer_t *buffer = &(pkt_buffer[bi]);
         
@@ -209,6 +215,8 @@ void Xgrid::send_raw_packet(Packet *pkt, uint16_t mask)
         
         // start at zero
         buffer->ptr = 0;
+        
+        SREG = saved_status;
 }
 
 
