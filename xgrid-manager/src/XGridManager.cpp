@@ -213,9 +213,9 @@ void XGridManager::on_tv_pkt_log_cursor_changed()
 {
         Gtk::TreeModel::iterator it = tv_pkt_log.get_selection()->get_selected();
         Gtk::TreeModel::Row row = *it;
-        //ZigBeePacket pkt = (ZigBeePacket)row[cPacketLogModel.Packet];
+        XGPacket pkt = (XGPacket)row[cPacketLogModel.packet];
         
-        //tv2_pkt_log.get_buffer()->set_text(pkt.get_desc());
+        tv2_pkt_log.get_buffer()->set_text(pkt.get_desc());
 }
 
 

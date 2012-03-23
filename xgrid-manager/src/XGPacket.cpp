@@ -225,6 +225,30 @@ bool XGPacket::decode_packet()
         return true;
 }
 
+std::string XGPacket::get_desc()
+{
+        std::stringstream desc;
+        
+        desc << "XGrid Packet" << std::endl;
+        desc << "  Length: " << std::dec << get_length() << std::endl;
+        desc << "  Source ID: 0x" << std::setfill('0') << std::setw(4) << std::hex << (int)source_id << std::endl;
+        desc << "  Type: 0x" << std::setfill('0') << std::setw(2) << std::hex << (int)type << std::endl;
+        desc << "  Seq: " << std::dec << (int)seq << std::endl;
+        desc << "  Flags: 0x" << std::setfill('0') << std::setw(2) << std::hex << (int)flags << std::endl;
+        desc << "  Radius: " << std::dec << (int)radius << std::endl;
+        
+        desc << "  Data (hex):";
+        for (int i = 0; i < data.size(); i++)
+        {
+                if (i > 0 && i % 16 == 0)
+                        desc << std::endl << "             ";
+                desc << " " << std::setfill('0') << std::setw(2) << std::hex << (int)data[i];
+        }
+        desc << std::endl;
+        
+        return desc.str();
+}
+
 std::string XGPacket::get_hex_packet()
 {
         std::vector<uint8_t> pkt = get_raw_packet();

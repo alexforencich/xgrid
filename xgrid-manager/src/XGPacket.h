@@ -86,6 +86,8 @@ public:
         bool build_packet();
         bool decode_packet();
         
+        std::string get_desc();
+        
         std::string get_hex_packet();
         
 protected:
