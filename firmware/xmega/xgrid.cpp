@@ -343,6 +343,9 @@ void Xgrid::process()
                                 ((uint8_t *)&(buffer->hdr))[buffer->ptr++] = nodes[i].stream->get();
                         }
                         
+                        if (buffer->ptr < sizeof(xgrid_header_t))
+                                continue;
+                        
                         // grab header
                         if (buffer->ptr >= sizeof(xgrid_header_t))
                         {
