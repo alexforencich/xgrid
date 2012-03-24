@@ -347,33 +347,30 @@ void Xgrid::process()
                                 continue;
                         
                         // grab header
-                        if (buffer->ptr >= sizeof(xgrid_header_t))
+                        pkt.source_id = buffer->hdr.source_id;
+                        pkt.type = buffer->hdr.type;
+                        pkt.seq = buffer->hdr.seq;
+                        pkt.flags = buffer->hdr.flags;
+                        pkt.radius = buffer->hdr.radius;
+                        pkt.rx_node = i;
+                        
+                        // is packet unique?
+                        if (!(buffer->flags & XGRID_BUFFER_UNIQUE))
                         {
-                                pkt.source_id = buffer->hdr.source_id;
-                                pkt.type = buffer->hdr.type;
-                                pkt.seq = buffer->hdr.seq;
-                                pkt.flags = buffer->hdr.flags;
-                                pkt.radius = buffer->hdr.radius;
-                                pkt.rx_node = i;
-                                
-                                // is packet unique?
-                                if (!(buffer->flags & XGRID_BUFFER_UNIQUE))
+                                if (check_unique(&pkt))
                                 {
-                                        if (check_unique(&pkt))
-                                        {
-                                                buffer->flags |= XGRID_BUFFER_UNIQUE;
-                                        }
-                                        else
-                                        {
-                                                // drop remainder
-                                                nodes[i].drop_chars = (buffer->hdr.size+3) - buffer->ptr;
-                                                
-                                                // release buffer
-                                                buffer->flags &= ~ XGRID_BUFFER_IN_USE;
-                                                nodes[i].rx_buffer = -1;
-                                                
-                                                continue;
-                                        }
+                                        buffer->flags |= XGRID_BUFFER_UNIQUE;
+                                }
+                                else
+                                {
+                                        // drop remainder
+                                        nodes[i].drop_chars = (buffer->hdr.size+3) - buffer->ptr;
+                                        
+                                        // release buffer
+                                        buffer->flags &= ~ XGRID_BUFFER_IN_USE;
+                                        nodes[i].rx_buffer = -1;
+                                        
+                                        continue;
                                 }
                         }
                         
