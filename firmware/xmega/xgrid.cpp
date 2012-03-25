@@ -76,6 +76,10 @@ Xgrid::Xgrid() :
         my_id = crc;
         
         NVM_CMD = NVM_CMD_NO_OPERATION_gc;
+        
+        xboot_app_crc16(&firmware_crc);
+        
+        build_number = (uint32_t) &__BUILD_NUMBER;
 }
 
 

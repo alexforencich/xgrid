@@ -137,6 +137,9 @@ private:
         uint16_t my_id;
         uint8_t cur_seq;
         
+        uint16_t firmware_crc;
+        uint32_t build_number;
+        
         // node list
         xgrid_node_t nodes[XGRID_MAX_NODES];
         int8_t node_cnt;
