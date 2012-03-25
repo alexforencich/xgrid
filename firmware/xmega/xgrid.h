@@ -62,7 +62,7 @@ extern char   __BUILD_NUMBER;
 #define XGRID_ESCAPE 0x55
 
 // packet types
-
+#include "xgrid_types.h"
 
 // Xgrid class
 class Xgrid
