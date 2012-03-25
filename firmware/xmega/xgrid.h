@@ -161,6 +161,8 @@ private:
         uint8_t check_unique(Packet *pkt);
         int8_t get_free_buffer(uint16_t data_size);
         
+        void internal_process_packet(Packet *pkt);
+        
         // Private static methods
         
 public:

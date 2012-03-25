@@ -404,8 +404,7 @@ void Xgrid::process()
                                         buffer->ptr = 0;
                                 }
                                 
-                                if (rx_pkt)
-                                        (*rx_pkt)(&pkt);
+                                internal_process_packet(&pkt);
                                 
                                 // release buffer
                                 buffer->flags &= ~ XGRID_BUFFER_IN_USE_RX;
@@ -511,9 +510,15 @@ void Xgrid::process_packet(Packet *pkt)
                         pkt->radius++;
                 }
                 
-                if (rx_pkt)
-                        (*rx_pkt)(pkt);
+                internal_process_packet(pkt);
         }
+}
+
+
+void Xgrid::internal_process_packet(Packet *pkt)
+{
+        if (rx_pkt)
+                (*rx_pkt)(pkt);
 }
 
 
