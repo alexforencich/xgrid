@@ -50,7 +50,7 @@ extern char   __BUILD_NUMBER;
 #define XGRID_SM_BUFFER_COUNT   4
 #define XGRID_SM_BUFFER_SIZE    64
 #define XGRID_LG_BUFFER_COUNT   2
-#define XGRID_LG_BUFFER_SIZE    512
+#define XGRID_LG_BUFFER_SIZE    (512+2)
 #define XGRID_BUFFER_COUNT      (XGRID_SM_BUFFER_COUNT + XGRID_LG_BUFFER_COUNT)
 
 #define XGRID_BUFFER_IN_USE     0x03
@@ -63,6 +63,11 @@ extern char   __BUILD_NUMBER;
 
 // packet types
 #include "xgrid_types.h"
+
+#define XGRID_STATE_IDLE        0x00
+#define XGRID_STATE_CHECK_VER   0x10
+#define XGRID_STATE_FW_TX       0x20
+#define XGRID_STATE_FW_RX       0x28
 
 // Xgrid class
 class Xgrid
@@ -121,6 +126,8 @@ private:
                 int8_t rx_buffer;
                 int8_t tx_buffer;
                 uint16_t drop_chars;
+                uint32_t build;
+                uint16_t crc;
         } xgrid_node_t;
         
         typedef struct
@@ -139,6 +146,13 @@ private:
         
         uint16_t firmware_crc;
         uint32_t build_number;
+        
+        uint32_t delay;
+        uint8_t state;
+        
+        uint16_t update_node_mask;
+        uint16_t new_crc;
+        uint32_t firmware_offset;
         
         // node list
         xgrid_node_t nodes[XGRID_MAX_NODES];

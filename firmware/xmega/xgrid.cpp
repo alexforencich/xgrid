@@ -37,6 +37,8 @@
 
 Xgrid::Xgrid() :
         cur_seq(0),
+        delay(10*1000),
+        state(XGRID_STATE_IDLE),
         node_cnt(0),
         compare_buffer_ptr(0),
         rx_pkt(0)
@@ -103,6 +105,8 @@ int8_t Xgrid::add_node(IOStream *stream)
                 nodes[node_cnt].tx_buffer = -1;
                 nodes[node_cnt].rx_buffer = -1;
                 nodes[node_cnt].drop_chars = 0;
+                nodes[node_cnt].build = 0;
+                nodes[node_cnt].crc = 0;
                 return node_cnt++;
         }
         
@@ -327,7 +331,7 @@ void Xgrid::process()
                                 
                                 len = stream->peek(1) | (stream->peek(2) << 8);
                                 
-                                int8_t bi = get_free_buffer(len);
+                                int8_t bi = get_free_buffer(len-sizeof(xgrid_header_short_t));
                                 
                                 if (bi < 0)
                                         continue;
@@ -493,6 +497,129 @@ void Xgrid::process()
                         }
                 }
         }
+        
+        // state machine and periodic tasks
+        if (delay > 0)
+        {
+                // delay processing
+                delay--;
+        }
+        else if (state == XGRID_STATE_IDLE)
+        {
+                // if we're idle, send a ping request
+                // to get neighbor firmware information
+                pkt.type = XGRID_PKT_PING_REQUEST;
+                pkt.flags = 0;
+                pkt.radius = 1;
+                pkt.data_len = 0;
+                
+                send_packet(&pkt);
+                
+                // wait 100 cycles
+                delay = 100;
+                state = XGRID_STATE_CHECK_VER;
+        }
+        else if (state == XGRID_STATE_CHECK_VER)
+        {
+                // default wait 1 hour at 1 kHz tick rate
+                // then check versions again
+                delay = 60UL*60UL*1000UL;
+                state = XGRID_STATE_IDLE;
+                
+                update_node_mask = 0;
+                
+                // check detected revisions
+                for (uint8_t n = 0; n < node_cnt; n++)
+                {
+                        if (nodes[n].build > 0 && nodes[n].build < build_number)
+                                update_node_mask |= (1 << n);
+                }
+                
+                // need to update somebody?
+                if (update_node_mask != 0)
+                {
+                        // send start update command
+                        uint8_t buffer[7];
+                        xgrid_pkt_maint_update_cmd_t *c = (xgrid_pkt_maint_update_cmd_t *)buffer;
+                        pkt.type = XGRID_PKT_MAINT_CMD;
+                        pkt.flags = 0;
+                        pkt.radius = 1;
+                        pkt.data = buffer;
+                        pkt.data_len = 7;
+                        
+                        c->cmd = XGRID_CMD_START_UPDATE;
+                        
+                        c->magic = XGRID_CMD_UPDATE_MAGIC;
+                        *((uint16_t *)c->data) = firmware_crc;
+                        
+                        send_packet(&pkt, update_node_mask);
+                        
+                        firmware_offset = 0;
+                        
+                        // start sending new firmware after small delay
+                        delay = 100;
+                        state = XGRID_STATE_FW_TX;
+                }
+        }
+        else if (state == XGRID_STATE_FW_TX)
+        {
+                if (firmware_offset < XB_APP_SIZE)
+                {
+                        // send flash block
+                        
+                        uint8_t buffer[SPM_PAGESIZE+2];
+                        xgrid_pkt_firmware_block_t *b = (xgrid_pkt_firmware_block_t *)buffer;
+                        pkt.type = XGRID_PKT_FIRMWARE_BLOCK;
+                        pkt.flags = 0;
+                        pkt.radius = 1;
+                        pkt.data = buffer;
+                        pkt.data_len = SPM_PAGESIZE+2;
+                        
+                        b->offset = firmware_offset/SPM_PAGESIZE;
+                        
+                        for (uint16_t i = 0; i < SPM_PAGESIZE; i++)
+                        {
+                                b->data[i] = pgm_read_byte(firmware_offset++);
+                        }
+                        
+                        send_packet(&pkt, update_node_mask);
+                        
+                        // small delay before next packet
+                        // long enough to clear data through serial
+                        // port buffer and write the block at the other end
+                        delay = 100;
+                }
+                else
+                {
+                        // send finish update command
+                        uint8_t buffer[5];
+                        xgrid_pkt_maint_update_cmd_t *c = (xgrid_pkt_maint_update_cmd_t *)buffer;
+                        pkt.type = XGRID_PKT_MAINT_CMD;
+                        pkt.flags = 0;
+                        pkt.radius = 1;
+                        pkt.data = buffer;
+                        pkt.data_len = 5;
+                        
+                        c->cmd = XGRID_CMD_FINISH_UPDATE;
+                        
+                        c->magic = XGRID_CMD_UPDATE_MAGIC;
+                        
+                        send_packet(&pkt, update_node_mask);
+                        
+                        // wait long enough for chips to reset
+                        delay = 30*1000;
+                        state = XGRID_STATE_IDLE;
+                }
+        }
+        else if (state == XGRID_STATE_FW_RX)
+        {
+                // nothing special
+        }
+        else
+        {
+                // invalid state, go back to idle, do not collect $200
+                state = XGRID_STATE_IDLE;
+        }
 }
 
 
@@ -534,11 +661,67 @@ void Xgrid::internal_process_packet(Packet *pkt)
         }
         else if (pkt->type == XGRID_PKT_PING_REPLY)
         {
+                xgrid_pkt_ping_reply_t *d = (xgrid_pkt_ping_reply_t *)(pkt->data);
                 
+                nodes[pkt->rx_node].build = d->build;
+                nodes[pkt->rx_node].crc = d->crc;
+        }
+        else if (pkt->type == XGRID_PKT_MAINT_CMD)
+        {
+                xgrid_pkt_maint_cmd_t *c = (xgrid_pkt_maint_cmd_t *)(pkt->data);
+                
+                if (c->cmd == XGRID_CMD_START_UPDATE)
+                {
+                        xgrid_pkt_maint_update_cmd_t *uc = (xgrid_pkt_maint_update_cmd_t *)(pkt->data);
+                        
+                        if (uc->magic == XGRID_CMD_UPDATE_MAGIC && state == XGRID_STATE_IDLE)
+                        {
+                                // start update
+                                firmware_offset = 0;
+                                new_crc = *((uint16_t *)uc->data);
+                                state = XGRID_STATE_FW_RX;
+                        }
+                }
+                else if (c->cmd == XGRID_CMD_FINISH_UPDATE && state == XGRID_STATE_FW_RX)
+                {
+                        xgrid_pkt_maint_update_cmd_t *uc = (xgrid_pkt_maint_update_cmd_t *)(pkt->data);
+                        
+                        if (uc->magic == XGRID_CMD_UPDATE_MAGIC)
+                        {
+                                state = XGRID_STATE_IDLE;
+                                
+                                // check and install firmware
+                                
+                                uint16_t cur_crc;
+                                
+                                xboot_app_temp_crc16(&cur_crc);
+                                
+                                if (cur_crc == new_crc)
+                                {
+                                        xboot_install_firmware(new_crc);
+                                        xboot_reset();
+                                }
+                        }
+                }
+                else if (c->cmd == XGRID_CMD_ABORT_UPDATE)
+                {
+                        xgrid_pkt_maint_update_cmd_t *uc = (xgrid_pkt_maint_update_cmd_t *)(pkt->data);
+                        
+                        if (uc->magic == XGRID_CMD_UPDATE_MAGIC && state == XGRID_STATE_FW_RX)
+                        {
+                                // abort update (go back to idle)
+                                state = XGRID_STATE_IDLE;
+                        }
+                }
         }
         else if (pkt->type == XGRID_PKT_FIRMWARE_BLOCK)
         {
-                
+                if (state == XGRID_STATE_FW_RX && pkt->data_len == SPM_PAGESIZE+2)
+                {
+                        xgrid_pkt_firmware_block_t *b = (xgrid_pkt_firmware_block_t *)(pkt->data);
+                        
+                        xboot_app_temp_write_page(b->offset * SPM_PAGESIZE, b->data, 1);
+                }
         }
         else if (pkt->type == XGRID_PKT_RESET)
         {
