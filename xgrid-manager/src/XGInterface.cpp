@@ -117,7 +117,7 @@ void XGInterface::send_packet(XGPacket &pkt)
                 
                 if (ret != SerialInterface::SS_Success)
                 {
-                        std::cerr << "[XGInterface] Error: unable to write packet!";
+                        std::cerr << "[XGInterface] Error: unable to write packet!" << std::endl;
                         m_signal_error.emit();
                         return;
                 }
