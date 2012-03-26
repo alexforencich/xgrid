@@ -39,6 +39,9 @@
 #include <deque>
 #include <inttypes.h>
 
+// packet types
+#include "xgrid_types.h"
+
 #define XGRID_IDENTIFIER 0x5A
 
 // XGPacket class
