@@ -517,8 +517,43 @@ void Xgrid::process_packet(Packet *pkt)
 
 void Xgrid::internal_process_packet(Packet *pkt)
 {
-        if (rx_pkt)
-                (*rx_pkt)(pkt);
+        if (pkt->type == XGRID_PKT_PING_REQUEST)
+        {
+                xgrid_pkt_ping_reply_t d;
+                d.build = build_number;
+                d.crc = firmware_crc;
+                
+                Packet reply;
+                reply.type = XGRID_PKT_PING_REPLY;
+                reply.flags = 0;
+                reply.radius = 1;
+                reply.data = (uint8_t *)&d;
+                reply.data_len = sizeof(xgrid_pkt_ping_reply_t);
+                
+                send_packet(&reply, (1 << pkt->rx_node));
+        }
+        else if (pkt->type == XGRID_PKT_PING_REPLY)
+        {
+                
+        }
+        else if (pkt->type == XGRID_PKT_FIRMWARE_BLOCK)
+        {
+                
+        }
+        else if (pkt->type == XGRID_PKT_RESET)
+        {
+                if (*((uint32_t *)pkt->data) == XGRID_PKT_RESET_MAGIC)
+                {
+                        xboot_reset();
+                }
+        }
+        else
+        {
+                // if we haven't processed the packet internally,
+                // pass it to the application
+                if (rx_pkt)
+                        (*rx_pkt)(pkt);
+        }
 }
 
 
