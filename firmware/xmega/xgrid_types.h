@@ -55,7 +55,7 @@
 
 typedef struct
 {
-        int32_t build;
+        uint32_t build;
         uint16_t crc;
 } __attribute__ ((PACKED_ATTR)) xgrid_pkt_ping_reply_t;
 
