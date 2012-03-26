@@ -120,6 +120,33 @@ XGridManager::XGridManager()
         sw2_pkt_log.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
         vpane_pkt_log.pack2(sw2_pkt_log, false, false);
         
+        // Node info tab
+        note.append_page(vbox_node_info, "Node info");
+        
+        frame_node_firmware_info.set_label("Firmware Information");
+        frame_node_firmware_info.set_border_width(5);
+        vbox_node_info.pack_start(frame_node_firmware_info, false, true, 0);
+        
+        vbox_node_firmware_info.set_border_width(5);
+        frame_node_firmware_info.add(vbox_node_firmware_info);
+        
+        lbl_node_build.set_label("Build:");
+        vbox_node_firmware_info.pack_start(lbl_node_build, false, true, 0);
+        
+        lbl_node_crc.set_label("CRC:");
+        vbox_node_firmware_info.pack_start(lbl_node_crc, false, true, 0);
+        
+        bbox_node_info.set_layout(Gtk::BUTTONBOX_SPREAD);
+        vbox_node_info.pack_start(bbox_node_info, false, true, 0);
+        
+        btn_node_query.set_label("Query");
+        btn_node_query.signal_clicked().connect( sigc::mem_fun(*this, &XGridManager::on_btn_node_query_click) );
+        bbox_node_info.add(btn_node_query);
+        
+        btn_node_reset.set_label("Reset");
+        btn_node_reset.signal_clicked().connect( sigc::mem_fun(*this, &XGridManager::on_btn_node_reset_click) );
+        bbox_node_info.add(btn_node_reset);
+        
         // status bar
         
         status.push("Not connected");
@@ -219,6 +246,52 @@ void XGridManager::on_tv_pkt_log_cursor_changed()
 }
 
 
+void XGridManager::on_btn_node_query_click()
+{
+        XGPacket pkt;
+        
+        pkt.type = XGRID_PKT_PING_REQUEST;
+        pkt.flags = 0;
+        pkt.radius = 1;
+        
+        send_packet(pkt);
+}
+
+
+void XGridManager::on_btn_node_reset_click()
+{
+        XGPacket pkt;
+        
+        pkt.type = XGRID_PKT_RESET;
+        pkt.flags = 0;
+        pkt.radius = 1;
+        pkt.data.push_back(XGRID_PKT_RESET_MAGIC);
+        pkt.data.push_back(XGRID_PKT_RESET_MAGIC >> 8);
+        pkt.data.push_back(XGRID_PKT_RESET_MAGIC >> 16);
+        pkt.data.push_back(XGRID_PKT_RESET_MAGIC >> 24);
+        
+        send_packet(pkt);
+}
+
+
+void XGridManager::send_packet(XGPacket pkt)
+{
+        xg_int.send_packet(pkt);
+        
+        Gtk::TreeModel::iterator it = tv_pkt_log_tm->append();
+        Gtk::TreePath path = Gtk::TreePath(it);
+        Gtk::TreeModel::Row row = *it;
+        row[cPacketLogModel.packet] = pkt;
+        row[cPacketLogModel.source_id] = Glib::ustring::format(std::hex, std::setfill(L'0'), std::setw(4), pkt.source_id);
+        row[cPacketLogModel.type] = pkt.type;
+        row[cPacketLogModel.seq] = pkt.seq;
+        row[cPacketLogModel.flags] = pkt.flags;
+        row[cPacketLogModel.radius] = pkt.radius;
+        row[cPacketLogModel.data] = pkt.get_hex_packet();
+        tv_pkt_log.scroll_to_row(path);
+}
+
+
 void XGridManager::on_port_open()
 {
         gsize num;
@@ -253,6 +326,15 @@ void XGridManager::on_receive_packet(XGPacket pkt)
         row[cPacketLogModel.radius] = pkt.radius;
         row[cPacketLogModel.data] = pkt.get_hex_packet();
         tv_pkt_log.scroll_to_row(path);
+        
+        if (pkt.type == XGRID_PKT_PING_REPLY)
+        {
+                // decode ping reply packet
+                xgrid_pkt_ping_reply_t *r = (xgrid_pkt_ping_reply_t *)&(pkt.data[0]);
+                
+                lbl_node_build.set_label("Build: " + Glib::ustring::format(r->build));
+                lbl_node_crc.set_label("CRC: 0x" + Glib::ustring::format(std::hex, std::setfill(L'0'), std::setw(4), r->crc));
+        }
 }
 
 

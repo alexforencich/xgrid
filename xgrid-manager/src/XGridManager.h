@@ -60,6 +60,11 @@ protected:
         
         void on_tv_pkt_log_cursor_changed();
         
+        void on_btn_node_query_click();
+        void on_btn_node_reset_click();
+        
+        void send_packet(XGPacket pkt);
+        
         void on_port_open();
         void on_port_close();
         
@@ -119,6 +124,15 @@ protected:
         Gtk::TreeView tv_pkt_log;
         Gtk::ScrolledWindow sw2_pkt_log;
         Gtk::TextView tv2_pkt_log;
+        // node info
+        Gtk::VBox vbox_node_info;
+        Gtk::Frame frame_node_firmware_info;
+        Gtk::VBox vbox_node_firmware_info;
+        Gtk::Label lbl_node_build;
+        Gtk::Label lbl_node_crc;
+        Gtk::HButtonBox bbox_node_info;
+        Gtk::Button btn_node_query;
+        Gtk::Button btn_node_reset;
         // status bar
         Gtk::Statusbar status;
         
