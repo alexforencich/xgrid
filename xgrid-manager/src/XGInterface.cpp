@@ -87,7 +87,7 @@ void XGInterface::reset_buffer()
 }
 
 
-void XGInterface::send_packet(XGPacket pkt)
+void XGInterface::send_packet(XGPacket &pkt)
 {
         gsize num;
         int ret;

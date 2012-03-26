@@ -58,7 +58,7 @@ public:
         
         void reset_buffer();
         
-        void send_packet(XGPacket pkt);
+        void send_packet(XGPacket &pkt);
         
         void set_id(uint16_t id);
         
