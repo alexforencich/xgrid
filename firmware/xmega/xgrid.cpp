@@ -365,7 +365,7 @@ void Xgrid::process()
                         // is packet unique?
                         if (!(buffer->flags & XGRID_BUFFER_UNIQUE))
                         {
-                                if (check_unique(&pkt))
+                                if ((pkt.type != XGRID_PKT_FIRMWARE_BLOCK || (state == XGRID_STATE_FW_RX && update_node_mask == pkt.rx_node)) && check_unique(&pkt))
                                 {
                                         buffer->flags |= XGRID_BUFFER_UNIQUE;
                                 }
@@ -679,6 +679,7 @@ void Xgrid::internal_process_packet(Packet *pkt)
                                 // start update
                                 firmware_offset = 0;
                                 new_crc = *((uint16_t *)uc->data);
+                                update_node_mask = pkt->rx_node;
                                 state = XGRID_STATE_FW_RX;
                         }
                 }
