@@ -262,13 +262,14 @@ void XGridManager::on_btn_node_reset_click()
 {
         XGPacket pkt;
         
-        pkt.type = XGRID_PKT_RESET;
+        pkt.type = XGRID_PKT_MAINT_CMD;
         pkt.flags = 0;
         pkt.radius = 1;
-        pkt.data.push_back(XGRID_PKT_RESET_MAGIC);
-        pkt.data.push_back(XGRID_PKT_RESET_MAGIC >> 8);
-        pkt.data.push_back(XGRID_PKT_RESET_MAGIC >> 16);
-        pkt.data.push_back(XGRID_PKT_RESET_MAGIC >> 24);
+        pkt.data.push_back(XGRID_CMD_RESET);
+        pkt.data.push_back(XGRID_CMD_RESET_MAGIC);
+        pkt.data.push_back(XGRID_CMD_RESET_MAGIC >> 8);
+        pkt.data.push_back(XGRID_CMD_RESET_MAGIC >> 16);
+        pkt.data.push_back(XGRID_CMD_RESET_MAGIC >> 24);
         
         send_packet(pkt);
 }

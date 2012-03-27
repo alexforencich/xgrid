@@ -540,7 +540,7 @@ void Xgrid::process()
                 {
                         // send start update command
                         uint8_t buffer[7];
-                        xgrid_pkt_maint_update_cmd_t *c = (xgrid_pkt_maint_update_cmd_t *)buffer;
+                        xgrid_pkt_maint_cmd_t *c = (xgrid_pkt_maint_cmd_t *)buffer;
                         pkt.type = XGRID_PKT_MAINT_CMD;
                         pkt.flags = 0;
                         pkt.radius = 1;
@@ -593,7 +593,7 @@ void Xgrid::process()
                 {
                         // send finish update command
                         uint8_t buffer[5];
-                        xgrid_pkt_maint_update_cmd_t *c = (xgrid_pkt_maint_update_cmd_t *)buffer;
+                        xgrid_pkt_maint_cmd_t *c = (xgrid_pkt_maint_cmd_t *)buffer;
                         pkt.type = XGRID_PKT_MAINT_CMD;
                         pkt.flags = 0;
                         pkt.radius = 1;
@@ -670,49 +670,41 @@ void Xgrid::internal_process_packet(Packet *pkt)
         {
                 xgrid_pkt_maint_cmd_t *c = (xgrid_pkt_maint_cmd_t *)(pkt->data);
                 
-                if (c->cmd == XGRID_CMD_START_UPDATE)
+                if (c->cmd == XGRID_CMD_START_UPDATE && c->magic == XGRID_CMD_UPDATE_MAGIC &&
+                                state == XGRID_STATE_IDLE)
                 {
-                        xgrid_pkt_maint_update_cmd_t *uc = (xgrid_pkt_maint_update_cmd_t *)(pkt->data);
+                        // start update
+                        firmware_offset = 0;
+                        new_crc = *((uint16_t *)c->data);
+                        update_node_mask = pkt->rx_node;
+                        state = XGRID_STATE_FW_RX;
+                }
+                else if (c->cmd == XGRID_CMD_FINISH_UPDATE && c->magic == XGRID_CMD_UPDATE_MAGIC &&
+                                state == XGRID_STATE_FW_RX)
+                {
+                        state = XGRID_STATE_IDLE;
                         
-                        if (uc->magic == XGRID_CMD_UPDATE_MAGIC && state == XGRID_STATE_IDLE)
+                        // check and install firmware
+                        
+                        uint16_t cur_crc;
+                        
+                        xboot_app_temp_crc16(&cur_crc);
+                        
+                        if (cur_crc == new_crc)
                         {
-                                // start update
-                                firmware_offset = 0;
-                                new_crc = *((uint16_t *)uc->data);
-                                update_node_mask = pkt->rx_node;
-                                state = XGRID_STATE_FW_RX;
+                                xboot_install_firmware(new_crc);
+                                xboot_reset();
                         }
                 }
-                else if (c->cmd == XGRID_CMD_FINISH_UPDATE && state == XGRID_STATE_FW_RX)
+                else if (c->cmd == XGRID_CMD_ABORT_UPDATE && c->magic == XGRID_CMD_UPDATE_MAGIC &&
+                                state == XGRID_STATE_FW_RX)
                 {
-                        xgrid_pkt_maint_update_cmd_t *uc = (xgrid_pkt_maint_update_cmd_t *)(pkt->data);
-                        
-                        if (uc->magic == XGRID_CMD_UPDATE_MAGIC)
-                        {
-                                state = XGRID_STATE_IDLE;
-                                
-                                // check and install firmware
-                                
-                                uint16_t cur_crc;
-                                
-                                xboot_app_temp_crc16(&cur_crc);
-                                
-                                if (cur_crc == new_crc)
-                                {
-                                        xboot_install_firmware(new_crc);
-                                        xboot_reset();
-                                }
-                        }
+                        // abort update (go back to idle)
+                        state = XGRID_STATE_IDLE;
                 }
-                else if (c->cmd == XGRID_CMD_ABORT_UPDATE)
+                else if (c->cmd == XGRID_CMD_RESET && c->magic == XGRID_CMD_RESET_MAGIC)
                 {
-                        xgrid_pkt_maint_update_cmd_t *uc = (xgrid_pkt_maint_update_cmd_t *)(pkt->data);
-                        
-                        if (uc->magic == XGRID_CMD_UPDATE_MAGIC && state == XGRID_STATE_FW_RX)
-                        {
-                                // abort update (go back to idle)
-                                state = XGRID_STATE_IDLE;
-                        }
+                        xboot_reset();
                 }
         }
         else if (pkt->type == XGRID_PKT_FIRMWARE_BLOCK)
@@ -722,13 +714,6 @@ void Xgrid::internal_process_packet(Packet *pkt)
                         xgrid_pkt_firmware_block_t *b = (xgrid_pkt_firmware_block_t *)(pkt->data);
                         
                         xboot_app_temp_write_page(b->offset * SPM_PAGESIZE, b->data, 1);
-                }
-        }
-        else if (pkt->type == XGRID_PKT_RESET)
-        {
-                if (*((uint32_t *)pkt->data) == XGRID_PKT_RESET_MAGIC)
-                {
-                        xboot_reset();
                 }
         }
         else

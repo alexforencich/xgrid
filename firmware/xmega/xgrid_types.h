@@ -60,8 +60,8 @@ typedef struct
 } __attribute__ ((PACKED_ATTR)) xgrid_pkt_ping_reply_t;
 
 // maintenance command
-// used to start, abort, and commit firmware updates
-// and other configuration
+// used in the firmware update process
+
 #define XGRID_PKT_MAINT_CMD 0xF9
 #define XGRID_PKT_MAINT_CMD_RESP 0xFA
 
@@ -71,18 +71,17 @@ typedef struct
 
 #define XGRID_CMD_UPDATE_MAGIC 0x0B501E7E
 
-typedef struct
-{
-        uint8_t cmd;
-        uint8_t data[];
-} __attribute__ ((PACKED_ATTR)) xgrid_pkt_maint_cmd_t;
+#define XGRID_CMD_RESET 0x90
+
+#define XGRID_CMD_RESET_MAGIC 0xFEE1DEAD
+
 
 typedef struct
 {
         uint8_t cmd;
         uint32_t magic;
         uint8_t data[];
-} __attribute__ ((PACKED_ATTR)) xgrid_pkt_maint_update_cmd_t;
+} __attribute__ ((PACKED_ATTR)) xgrid_pkt_maint_cmd_t;
 
 // firmware block
 // first two bytes base address / SPM_PAGESIZE
@@ -94,11 +93,6 @@ typedef struct
         int16_t offset;
         uint8_t data[];
 } __attribute__ ((PACKED_ATTR)) xgrid_pkt_firmware_block_t;
-
-// reset command
-// must contain magic number
-#define XGRID_PKT_RESET 0xFC
-#define XGRID_PKT_RESET_MAGIC 0xFEE1DEAD
 
 #endif // __XGRID_TYPES_H
 
