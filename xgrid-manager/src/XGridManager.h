@@ -42,6 +42,7 @@
 #include "SerialInterface.h"
 #include "XGPacket.h"
 #include "XGInterface.h"
+#include "XGPacketBuilder.h"
 
 // XGridManager class
 class XGridManager : public Gtk::Window
@@ -60,10 +61,13 @@ protected:
         
         void on_tv_pkt_log_cursor_changed();
         
+        void on_pkt_builder_change();
+        void on_btn_pkt_builder_send_click();
+        
         void on_btn_node_query_click();
         void on_btn_node_reset_click();
         
-        void send_packet(XGPacket pkt);
+        void send_packet(XGPacket &pkt);
         
         void on_port_open();
         void on_port_close();
@@ -133,6 +137,16 @@ protected:
         Gtk::HButtonBox bbox_node_info;
         Gtk::Button btn_node_query;
         Gtk::Button btn_node_reset;
+        // packet builder
+        Gtk::VBox vbox_pkt_builder;
+        Gtk::VPaned vpane_pkt_builder;
+        Gtk::HButtonBox bbox_pkt_builder;
+        Gtk::Button btn_pkt_builder_send;
+        Gtk::ScrolledWindow sw_pkt_builder;
+        XGPacketBuilder pkt_builder;
+        Gtk::ScrolledWindow sw2_pkt_builder;
+        Gtk::TextView tv_pkt_builder;
+        
         // status bar
         Gtk::Statusbar status;
         

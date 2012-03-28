@@ -147,6 +147,33 @@ XGridManager::XGridManager()
         btn_node_reset.signal_clicked().connect( sigc::mem_fun(*this, &XGridManager::on_btn_node_reset_click) );
         bbox_node_info.add(btn_node_reset);
         
+        // Packet builder tab
+        note.append_page(vbox_pkt_builder, "Packet Builder");
+        
+        vbox_pkt_builder.pack_start(vpane_pkt_builder, true, true, 0);
+        
+        pkt_builder.set_border_width(5);
+        pkt_builder.signal_changed().connect( sigc::mem_fun(*this, &XGridManager::on_pkt_builder_change) );
+        sw_pkt_builder.add(pkt_builder);
+        sw_pkt_builder.set_policy(Gtk::POLICY_NEVER, Gtk::POLICY_AUTOMATIC);
+        vpane_pkt_builder.pack1(sw_pkt_builder, true, true);
+        
+        tv_pkt_builder.modify_font(Pango::FontDescription("monospace"));
+        tv_pkt_builder.set_editable(false);
+        tv_pkt_builder.set_wrap_mode(Gtk::WRAP_WORD_CHAR);
+        
+        sw2_pkt_builder.add(tv_pkt_builder);
+        sw2_pkt_builder.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
+        vpane_pkt_builder.pack2(sw2_pkt_builder, false, false);
+        
+        bbox_pkt_builder.set_layout(Gtk::BUTTONBOX_SPREAD);
+        bbox_pkt_builder.set_border_width(5);
+        vbox_pkt_builder.pack_start(bbox_pkt_builder, false, false, 0);
+        
+        btn_pkt_builder_send.set_label("Send Packet");
+        btn_pkt_builder_send.signal_clicked().connect( sigc::mem_fun(*this, &XGridManager::on_btn_pkt_builder_send_click) );
+        bbox_pkt_builder.add(btn_pkt_builder_send);
+        
         // status bar
         
         status.push("Not connected");
@@ -243,6 +270,24 @@ void XGridManager::on_tv_pkt_log_cursor_changed()
         XGPacket pkt = (XGPacket)row[cPacketLogModel.packet];
         
         tv2_pkt_log.get_buffer()->set_text(pkt.get_desc());
+        
+        pkt_builder.set_packet(pkt);
+}
+
+
+void XGridManager::on_pkt_builder_change()
+{
+        tv_pkt_builder.get_buffer()->set_text(pkt_builder.get_packet().get_hex_packet());
+}
+
+
+void XGridManager::on_btn_pkt_builder_send_click()
+{
+        XGPacket pkt = pkt_builder.get_packet();
+        
+        send_packet(pkt);
+        
+        pkt_builder.set_packet(pkt);
 }
 
 
@@ -266,16 +311,16 @@ void XGridManager::on_btn_node_reset_click()
         pkt.flags = 0;
         pkt.radius = 1;
         pkt.data.push_back(XGRID_CMD_RESET);
-        pkt.data.push_back(XGRID_CMD_RESET_MAGIC);
-        pkt.data.push_back(XGRID_CMD_RESET_MAGIC >> 8);
-        pkt.data.push_back(XGRID_CMD_RESET_MAGIC >> 16);
-        pkt.data.push_back(XGRID_CMD_RESET_MAGIC >> 24);
+        pkt.data.push_back((XGRID_CMD_RESET_MAGIC) & 0xFF);
+        pkt.data.push_back((XGRID_CMD_RESET_MAGIC >> 8) & 0xFF);
+        pkt.data.push_back((XGRID_CMD_RESET_MAGIC >> 16) & 0xFF);
+        pkt.data.push_back((XGRID_CMD_RESET_MAGIC >> 24) & 0xFF);
         
         send_packet(pkt);
 }
 
 
-void XGridManager::send_packet(XGPacket pkt)
+void XGridManager::send_packet(XGPacket &pkt)
 {
         xg_int.send_packet(pkt);
         
