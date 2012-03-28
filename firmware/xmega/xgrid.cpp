@@ -638,6 +638,13 @@ void Xgrid::process()
                         
                         send_packet(&pkt, update_node_mask);
                         
+                        // flush old build information
+                        for (int i = 0; i < node_cnt; i++)
+                        {
+                                nodes[i].build = 0;
+                                nodes[i].crc = 0;
+                        }
+                        
                         // wait long enough for chips to reset
                         delay = 30*1000;
                         state = XGRID_STATE_IDLE;
