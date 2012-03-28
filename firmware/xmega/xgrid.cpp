@@ -398,14 +398,31 @@ void Xgrid::process()
                                 // process packet
                                 if (pkt.radius > 1)
                                 {
+                                        uint8_t use_current = 1;
                                         uint16_t mask = 0xFFFF;
                                         if (pkt.rx_node < 16)
                                                 mask &= ~(1 << pkt.rx_node);
                                         
-                                        buffer->hdr.radius--;
-                                        buffer->mask = mask;
-                                        buffer->flags |= XGRID_BUFFER_IN_USE_TX;
-                                        buffer->ptr = 0;
+                                        if (buffer->hdr.flags & XGRID_PKT_FLAG_TRACE)
+                                        {
+                                                buffer->hdr.size++;
+                                                if (buffer->hdr.size - sizeof(xgrid_header_short_t) <= buffer->buffer_len)
+                                                {
+                                                        buffer->buffer[buffer->hdr.size - sizeof(xgrid_header_short_t) - 1] = pkt.rx_node;
+                                                }
+                                                else
+                                                {
+                                                        // TODO
+                                                }
+                                        }
+                                        
+                                        if (use_current)
+                                        {
+                                                buffer->hdr.radius--;
+                                                buffer->mask = mask;
+                                                buffer->flags |= XGRID_BUFFER_IN_USE_TX;
+                                                buffer->ptr = 0;
+                                        }
                                 }
                                 
                                 internal_process_packet(&pkt);

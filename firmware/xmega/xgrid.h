@@ -64,6 +64,10 @@ extern char   __BUILD_NUMBER;
 // packet types
 #include "xgrid_types.h"
 
+// flags
+#define XGRID_PKT_FLAG_TRACE    0x10
+
+// states
 #define XGRID_STATE_IDLE        0x00
 #define XGRID_STATE_CHECK_VER   0x10
 #define XGRID_STATE_FW_TX       0x20
