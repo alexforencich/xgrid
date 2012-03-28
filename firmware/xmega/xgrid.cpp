@@ -37,6 +37,7 @@
 
 Xgrid::Xgrid() :
         cur_seq(0),
+        timeout(0),
         state(XGRID_STATE_IDLE),
         node_cnt(0),
         compare_buffer_ptr(0),
@@ -530,6 +531,15 @@ void Xgrid::process()
                 }
         }
         
+        // state machine timeout
+        if (timeout > 0)
+        {
+                timeout--;
+                
+                if (timeout == 0)
+                        state = XGRID_STATE_IDLE;
+        }
+        
         // state machine and periodic tasks
         if (delay > 0)
         {
@@ -550,6 +560,7 @@ void Xgrid::process()
                 // wait 100 cycles
                 delay = 100;
                 state = XGRID_STATE_CHECK_VER;
+                timeout = 0;
         }
         else if (state == XGRID_STATE_CHECK_VER)
         {
@@ -717,6 +728,7 @@ void Xgrid::internal_process_packet(Packet *pkt)
                         new_crc = *((uint16_t *)c->data);
                         update_node_mask = pkt->rx_node;
                         state = XGRID_STATE_FW_RX;
+                        timeout = 10000;
                 }
                 else if (c->cmd == XGRID_CMD_FINISH_UPDATE && c->magic == XGRID_CMD_UPDATE_MAGIC &&
                                 state == XGRID_STATE_FW_RX)
@@ -753,6 +765,8 @@ void Xgrid::internal_process_packet(Packet *pkt)
                         xgrid_pkt_firmware_block_t *b = (xgrid_pkt_firmware_block_t *)(pkt->data);
                         
                         xboot_app_temp_write_page(b->offset * SPM_PAGESIZE, b->data, 1);
+                        
+                        timeout = 10000;
                 }
         }
         else

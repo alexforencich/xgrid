@@ -151,6 +151,7 @@ private:
         uint16_t firmware_crc;
         uint32_t build_number;
         
+        uint16_t timeout;
         uint32_t delay;
         uint8_t state;
         
