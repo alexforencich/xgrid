@@ -189,8 +189,14 @@ void Xgrid::send_raw_packet(Packet *pkt, uint16_t mask)
         cli();
         
         // drop packet if not firmware releated during update cycle
-        if (state == XGRID_STATE_FW_RX && (pkt->type & 0xF0 != 0xF0))
+        if (state == XGRID_STATE_FW_RX && ((pkt->type & 0xF0) != 0xF0))
+        {
+                SREG = saved_status;
                 return;
+        }
+        // don't send extra packets to the node we're updating
+        if (state == XGRID_STATE_FW_TX && ((pkt->type & 0xF0) != 0xF0))
+                mask &= ~ update_node_mask;
         
         // get buffer index
         int8_t bi = get_free_buffer(pkt->data_len);
@@ -370,7 +376,7 @@ void Xgrid::process()
                         if (!(buffer->flags & XGRID_BUFFER_UNIQUE))
                         {
                                 if ((pkt.type != XGRID_PKT_FIRMWARE_BLOCK || (state == XGRID_STATE_FW_RX && update_node_mask == pkt.rx_node)) &&
-                                        (~(state == XGRID_STATE_FW_RX && (pkt.type & 0xF0 != 0xF0)))&&
+                                        !(state == XGRID_STATE_FW_RX && ((pkt.type & 0xF0) != 0xF0)) &&
                                         check_unique(&pkt))
                                 {
                                         buffer->flags |= XGRID_BUFFER_UNIQUE;
@@ -544,9 +550,9 @@ void Xgrid::process()
         }
         else if (state == XGRID_STATE_CHECK_VER)
         {
-                // default wait 1 hour at 1 kHz tick rate
-                // then check versions again
-                delay = 60UL*60UL*1000UL;
+                // check versions every 30 seconds
+                // at 1 kHz tick rate
+                delay = 30*1000;
                 state = XGRID_STATE_IDLE;
                 
                 update_node_mask = 0;
@@ -694,7 +700,7 @@ void Xgrid::internal_process_packet(Packet *pkt)
                 xgrid_pkt_maint_cmd_t *c = (xgrid_pkt_maint_cmd_t *)(pkt->data);
                 
                 if (c->cmd == XGRID_CMD_START_UPDATE && c->magic == XGRID_CMD_UPDATE_MAGIC &&
-                                state == XGRID_STATE_IDLE)
+                                (state == XGRID_STATE_IDLE || state == XGRID_STATE_FW_RX))
                 {
                         // start update
                         firmware_offset = 0;
