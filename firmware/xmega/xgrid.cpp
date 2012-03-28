@@ -37,7 +37,7 @@
 
 Xgrid::Xgrid() :
         cur_seq(0),
-        delay(10*1000),
+        delay(2*1000),
         state(XGRID_STATE_IDLE),
         node_cnt(0),
         compare_buffer_ptr(0),
@@ -187,6 +187,10 @@ void Xgrid::send_raw_packet(Packet *pkt, uint16_t mask)
 {
         uint8_t saved_status = SREG;
         cli();
+        
+        // drop packet if not firmware releated during update cycle
+        if (state == XGRID_STATE_FW_RX && (pkt->type & 0xF0 != 0xF0))
+                return;
         
         // get buffer index
         int8_t bi = get_free_buffer(pkt->data_len);
@@ -365,7 +369,9 @@ void Xgrid::process()
                         // is packet unique?
                         if (!(buffer->flags & XGRID_BUFFER_UNIQUE))
                         {
-                                if ((pkt.type != XGRID_PKT_FIRMWARE_BLOCK || (state == XGRID_STATE_FW_RX && update_node_mask == pkt.rx_node)) && check_unique(&pkt))
+                                if ((pkt.type != XGRID_PKT_FIRMWARE_BLOCK || (state == XGRID_STATE_FW_RX && update_node_mask == pkt.rx_node)) &&
+                                        (~(state == XGRID_STATE_FW_RX && (pkt.type & 0xF0 != 0xF0)))&&
+                                        check_unique(&pkt))
                                 {
                                         buffer->flags |= XGRID_BUFFER_UNIQUE;
                                 }
