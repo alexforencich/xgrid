@@ -55,30 +55,35 @@ XGPacketBuilder::XGPacketBuilder()
         tbl.attach(lbl_source, 0, 1, 0, 1);
         
         ent_source.set_text("0x0000");
+        ent_source.signal_changed().connect( sigc::mem_fun(*this, &XGPacketBuilder::on_source_change) );
         tbl.attach(ent_source, 1, 2, 0, 1);
         
         lbl_type.set_label("Type:");
         tbl.attach(lbl_type, 0, 1, 1, 2);
         
         ent_type.set_text("0x00");
+        ent_type.signal_changed().connect( sigc::mem_fun(*this, &XGPacketBuilder::on_type_change) );
         tbl.attach(ent_type, 1, 2, 1, 2);
         
         lbl_seq.set_label("Sequence:");
         tbl.attach(lbl_seq, 0, 1, 2, 3);
         
         ent_seq.set_text("0");
+        ent_seq.signal_changed().connect( sigc::mem_fun(*this, &XGPacketBuilder::on_seq_change) );
         tbl.attach(ent_seq, 1, 2, 2, 3);
         
         lbl_flags.set_label("Flags:");
         tbl.attach(lbl_flags, 0, 1, 3, 4);
         
         ent_flags.set_text("0x00");
+        ent_flags.signal_changed().connect( sigc::mem_fun(*this, &XGPacketBuilder::on_flags_change) );
         tbl.attach(ent_flags, 1, 2, 3, 4);
         
         lbl_radius.set_label("Radius:");
         tbl.attach(lbl_radius, 0, 1, 4, 5);
         
         ent_radius.set_text("0");
+        ent_radius.signal_changed().connect( sigc::mem_fun(*this, &XGPacketBuilder::on_radius_change) );
         tbl.attach(ent_radius, 1, 2, 4, 5);
         
         lbl_data.set_label("Data:");
