@@ -37,7 +37,6 @@
 
 Xgrid::Xgrid() :
         cur_seq(0),
-        delay(2*1000),
         state(XGRID_STATE_IDLE),
         node_cnt(0),
         compare_buffer_ptr(0),
@@ -78,6 +77,10 @@ Xgrid::Xgrid() :
         my_id = crc;
         
         NVM_CMD = NVM_CMD_NO_OPERATION_gc;
+        
+        // set initial delay
+        // add some entropy
+        delay = (3 * 1000) + (my_id & 0x03FF);
         
         xboot_app_crc16(&firmware_crc);
         
