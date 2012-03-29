@@ -1,4 +1,5 @@
-# xmega128a3 configuration
+# Boulder Art Wall Node configuration
+# xmega128a3
 
 # use config.h
 USE_CONFIG_H = yes
@@ -12,7 +13,7 @@ F_CPU = 2000000
 
 # Programmer settings
 OVERRIDE_AVRDUDE_PROGRAMMER = yes
-AVRDUDE_PROGRAMMER = jtag2pdi
+AVRDUDE_PROGRAMMER = avrisp2
 AVRDUDE_PORT = usb
 
 # Fuse settings
@@ -38,6 +39,11 @@ AVRDUDE_FUSES =
 # in power down configuration
 # See datasheet section 4.16.3 for more information
 #AVRDUDE_FUSES += -U fuse2:w:0xBF:m
+# Enable bootloader and BOD
+# BODLEVEL = 010 (2.7 volts)
+# BODACT/BODPD = 10 (enabled)
+# BOOTRST = 0 (boot section)
+AVRDUDE_FUSES += -U fuse2:w:0xBE:m
 
 # There is no fuse byte 3.....
 
@@ -53,6 +59,7 @@ AVRDUDE_FUSES =
 # EEPROM preserved through chip erase, and
 # BOD detection leven
 #AVRDUDE_FUSES += -U fuse5:w:0xFF:m
+AVRDUDE_FUSES += -U fuse5:w:0xEA:m
 
 # Lock byte
 # See datasheet section 4.16.6
@@ -69,7 +76,7 @@ AVRDUDE_FUSES =
 
 # Uncomment to override default fuse configurations
 # from main Makefile
-#OVERRIDE_AVRDUDE_FUSES = yes
+OVERRIDE_AVRDUDE_FUSES = yes
 
 # XBoot settings
 
