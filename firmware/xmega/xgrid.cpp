@@ -35,10 +35,22 @@
 #include <util/crc16.h>
 #include <string.h>
 
+#if PROGMEM_SIZE > 0x010000
+#define PGM_READ_BYTE pgm_read_byte_far
+#define PGM_READ_WORD pgm_read_word_far
+#define PGM_READ_DWORD pgm_read_dword_far
+#else
+#define PGM_READ_BYTE pgm_read_byte_near
+#define PGM_READ_WORD pgm_read_word_near
+#define PGM_READ_DWORD pgm_read_dword_near
+#endif
+
 Xgrid::Xgrid() :
         cur_seq(0),
         timeout(0),
-        state(XGRID_STATE_IDLE),
+        state(XGRID_STATE_INIT),
+        firmware_offset(0),
+        firmware_updated(0),
         node_cnt(0),
         compare_buffer_ptr(0),
         rx_pkt(0)
@@ -71,7 +83,7 @@ Xgrid::Xgrid() :
         
         for (uint32_t i = 0x08; i <= 0x15; i++)
         {
-                b = pgm_read_byte(i);
+                b = PGM_READ_BYTE(i);
                 crc = _crc16_update(crc, b);
         }
         
@@ -379,9 +391,10 @@ void Xgrid::process()
                         // is packet unique?
                         if (!(buffer->flags & XGRID_BUFFER_UNIQUE))
                         {
-                                if ((pkt.type != XGRID_PKT_FIRMWARE_BLOCK || (state == XGRID_STATE_FW_RX && update_node_mask == pkt.rx_node)) &&
+                                if (pkt.type == XGRID_PKT_FLUSH_COMPARE_BUFFER ||
+                                        ((pkt.type != XGRID_PKT_FIRMWARE_BLOCK || (state == XGRID_STATE_FW_RX && update_node_mask == pkt.rx_node)) &&
                                         !(state == XGRID_STATE_FW_RX && ((pkt.type & 0xF0) != 0xF0)) &&
-                                        check_unique(&pkt))
+                                        check_unique(&pkt)))
                                 {
                                         buffer->flags |= XGRID_BUFFER_UNIQUE;
                                 }
@@ -541,6 +554,7 @@ void Xgrid::process()
 #ifdef DEBUG
                         printf_P(PSTR("timeout!\n"));
 #endif DEBUG
+                        firmware_offset = 0;
                         state = XGRID_STATE_IDLE;
                 }
         }
@@ -550,6 +564,23 @@ void Xgrid::process()
         {
                 // delay processing
                 delay--;
+        }
+        else if (state == XGRID_STATE_INIT)
+        {
+#ifdef DEBUG
+                printf_P(PSTR("init, send flush command\n"));
+#endif DEBUG
+                pkt.type = XGRID_PKT_FLUSH_COMPARE_BUFFER;
+                pkt.flags = 0;
+                pkt.radius = 1;
+                pkt.data = 0;
+                pkt.data_len = 0;
+                
+                send_packet(&pkt);
+                
+                delay = 1000;
+                state = XGRID_STATE_IDLE;
+                timeout = 0;
         }
         else if (state == XGRID_STATE_IDLE)
         {
@@ -593,7 +624,15 @@ void Xgrid::process()
                         printf_P(PSTR("node %d: %ld (%04x)\n"), n, nodes[n].build, nodes[n].crc);
 #endif DEBUG
                         if (nodes[n].build > 0 && nodes[n].build < build_number)
+                        {
                                 update_node_mask |= (1 << n);
+                        }
+                        else if (nodes[n].build > build_number)
+                        {
+                                // we're old, don't try to update anybody
+                                update_node_mask = 0;
+                                break;
+                        }
                 }
                 
                 // need to update somebody?
@@ -603,31 +642,47 @@ void Xgrid::process()
                         printf_P(PSTR("send start update command\n"));
 #endif DEBUG
                         // send start update command
-                        uint8_t buffer[7];
-                        xgrid_pkt_maint_cmd_t *c = (xgrid_pkt_maint_cmd_t *)buffer;
+                        uint8_t buffer[11];
+                        //xgrid_pkt_maint_cmd_t *c = (xgrid_pkt_maint_cmd_t *)buffer;
+                        xgrid_pkt_maint_cmd_start_update_t *c = (xgrid_pkt_maint_cmd_start_update_t *)buffer;
                         pkt.type = XGRID_PKT_MAINT_CMD;
                         pkt.flags = 0;
                         pkt.radius = 1;
                         pkt.data = buffer;
-                        pkt.data_len = 7;
+                        pkt.data_len = sizeof(xgrid_pkt_maint_cmd_start_update_t);
                         
                         c->cmd = XGRID_CMD_START_UPDATE;
                         
                         c->magic = XGRID_CMD_UPDATE_MAGIC;
-                        *((uint16_t *)c->data) = firmware_crc;
+                        
+                        c->crc = firmware_crc;
+                        c->build = build_number;
                         
                         send_packet(&pkt, update_node_mask);
                         
-                        firmware_offset = 0;
+                        if (firmware_updated)
+                                firmware_offset = XB_APP_TEMP_START;
+                        else
+                                firmware_offset = 0;
                         
                         // start sending new firmware after small delay
                         delay = 100;
                         state = XGRID_STATE_FW_TX;
                 }
+                else
+                {
+                        // if we've been updated and no one else needs an update,
+                        // install the firmware and reset
+                        if (firmware_updated)
+                        {
+                                xboot_reset();
+                        }
+                }
         }
         else if (state == XGRID_STATE_FW_TX)
         {
-                if (firmware_offset < XB_APP_SIZE)
+                if (firmware_offset < XB_APP_SIZE ||
+                        (firmware_updated && firmware_offset < (XB_APP_TEMP_START + XB_APP_TEMP_SIZE)))
                 {
 #ifdef DEBUG
                         printf_P(PSTR("send firmware block\n"));
@@ -642,11 +697,20 @@ void Xgrid::process()
                         pkt.data = buffer;
                         pkt.data_len = SPM_PAGESIZE+2;
                         
-                        b->offset = firmware_offset/SPM_PAGESIZE;
+                        if (firmware_updated)
+                                b->offset = (firmware_offset - XB_APP_TEMP_START)/SPM_PAGESIZE;
+                        else
+                                b->offset = firmware_offset/SPM_PAGESIZE;
                         
                         for (uint16_t i = 0; i < SPM_PAGESIZE; i++)
                         {
-                                b->data[i] = pgm_read_byte(firmware_offset++);
+                                b->data[i] = PGM_READ_BYTE(firmware_offset++);
+                        }
+                        
+                        if (firmware_offset == XB_APP_TEMP_END)
+                        {
+                                for (uint16_t i = SPM_PAGESIZE - 7; i < SPM_PAGESIZE; i++)
+                                        b->data[i] = 0xff;
                         }
                         
                         send_packet(&pkt, update_node_mask);
@@ -683,8 +747,8 @@ void Xgrid::process()
                                 nodes[i].crc = 0;
                         }
                         
-                        // wait long enough for chips to reset
-                        delay = 30*1000;
+                        // check again after short delay
+                        delay = 1000;
                         state = XGRID_STATE_IDLE;
                 }
         }
@@ -757,22 +821,32 @@ void Xgrid::internal_process_packet(Packet *pkt)
                 xgrid_pkt_maint_cmd_t *c = (xgrid_pkt_maint_cmd_t *)(pkt->data);
                 
                 if (c->cmd == XGRID_CMD_START_UPDATE && c->magic == XGRID_CMD_UPDATE_MAGIC &&
-                                (state == XGRID_STATE_IDLE || state == XGRID_STATE_FW_RX))
+                                state != XGRID_STATE_FW_RX)
                 {
 #ifdef DEBUG
                         printf_P(PSTR("start update\n"));
 #endif DEBUG
                         // start update
                         firmware_offset = 0;
-                        new_crc = *((uint16_t *)c->data);
-                        update_node_mask = pkt->rx_node;
-                        state = XGRID_STATE_FW_RX;
-                        timeout = 10000;
+                        
+                        xgrid_pkt_maint_cmd_start_update_t *csu = (xgrid_pkt_maint_cmd_start_update_t *)(pkt->data);
+                        
+                        if (csu->build > build_number)
+                        {
+                                // sanity check: only update if being
+                                // offered a more recent version
+                                
+                                new_build = csu->build;
+                                new_crc = csu->crc;
+                                
+                                update_node_mask = pkt->rx_node;
+                                state = XGRID_STATE_FW_RX;
+                                timeout = 1000;
+                        }
                 }
                 else if (c->cmd == XGRID_CMD_FINISH_UPDATE && c->magic == XGRID_CMD_UPDATE_MAGIC &&
                                 state == XGRID_STATE_FW_RX)
                 {
-                        state = XGRID_STATE_IDLE;
 #ifdef DEBUG
                         printf_P(PSTR("finish update\n"));
 #endif DEBUG
@@ -792,9 +866,25 @@ void Xgrid::internal_process_packet(Packet *pkt)
 #ifdef DEBUG
                                 printf_P(PSTR("good crc\n"));
 #endif DEBUG
+                                firmware_crc = new_crc;
+                                build_number = new_build;
+                                firmware_offset = XB_APP_TEMP_START;
+                                firmware_updated = 1;
+                                // init install
                                 xboot_install_firmware(new_crc);
-                                xboot_reset();
                         }
+                        else
+                        {
+#ifdef DEBUG
+                                printf_P(PSTR("bad crc\n"));
+#endif DEBUG
+                                firmware_offset = 0;
+                        }
+                        
+                        // go back to idle and check neighbor firmware versions
+                        timeout = 0;
+                        delay = 100;
+                        state = XGRID_STATE_IDLE;
                 }
                 else if (c->cmd == XGRID_CMD_ABORT_UPDATE && c->magic == XGRID_CMD_UPDATE_MAGIC &&
                                 state == XGRID_STATE_FW_RX)
@@ -803,6 +893,7 @@ void Xgrid::internal_process_packet(Packet *pkt)
                         printf_P(PSTR("abort update\n"));
 #endif DEBUG
                         // abort update (go back to idle)
+                        firmware_offset = 0;
                         state = XGRID_STATE_IDLE;
                 }
                 else if (c->cmd == XGRID_CMD_RESET && c->magic == XGRID_CMD_RESET_MAGIC)
@@ -824,8 +915,15 @@ void Xgrid::internal_process_packet(Packet *pkt)
                         
                         xboot_app_temp_write_page(b->offset * SPM_PAGESIZE, b->data, 1);
                         
-                        timeout = 10000;
+                        timeout = 1000;
                 }
+        }
+        else if (pkt->type == XGRID_PKT_FLUSH_COMPARE_BUFFER)
+        {
+#ifdef DEBUG
+                printf_P(PSTR("rx flush buffer\n"));
+#endif DEBUG
+                memset(compare_buffer, 0, sizeof(xgrid_header_minimal_t) * XGRID_COMPARE_BUFFER_SIZE);
         }
         else
         {

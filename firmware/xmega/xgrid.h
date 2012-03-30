@@ -69,6 +69,7 @@ extern char   __BUILD_NUMBER;
 
 // states
 #define XGRID_STATE_IDLE        0x00
+#define XGRID_STATE_INIT        0x01
 #define XGRID_STATE_CHECK_VER   0x10
 #define XGRID_STATE_FW_TX       0x20
 #define XGRID_STATE_FW_RX       0x28
@@ -159,7 +160,9 @@ private:
         
         uint16_t update_node_mask;
         uint16_t new_crc;
+        uint32_t new_build;
         uint32_t firmware_offset;
+        uint8_t firmware_updated;
         
         // node list
         xgrid_node_t nodes[XGRID_MAX_NODES];

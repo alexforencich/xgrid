@@ -83,6 +83,14 @@ typedef struct
         uint8_t data[];
 } __attribute__ ((PACKED_ATTR)) xgrid_pkt_maint_cmd_t;
 
+typedef struct
+{
+        uint8_t cmd;
+        uint32_t magic;
+        uint16_t crc;
+        uint32_t build;
+} __attribute__ ((PACKED_ATTR)) xgrid_pkt_maint_cmd_start_update_t;
+
 // firmware block
 // first two bytes base address / SPM_PAGESIZE
 // followed by SPM_PAGESIZE bytes of firmware
@@ -93,6 +101,9 @@ typedef struct
         int16_t offset;
         uint8_t data[];
 } __attribute__ ((PACKED_ATTR)) xgrid_pkt_firmware_block_t;
+
+// flush compare buffer
+#define XGRID_PKT_FLUSH_COMPARE_BUFFER 0xFC
 
 #endif // __XGRID_TYPES_H
 
