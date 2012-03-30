@@ -33,8 +33,8 @@
 
 // USART
 
-#define USART_TX_BUF_SIZE 64
-#define USART_RX_BUF_SIZE 64
+#define USART_TX_BUF_SIZE 192
+#define USART_RX_BUF_SIZE 32
 char usart_txbuf[USART_TX_BUF_SIZE];
 char usart_rxbuf[USART_RX_BUF_SIZE];
 CREATE_USART(usart, UART_DEVICE_PORT);
@@ -113,7 +113,7 @@ void rx_pkt(Xgrid::Packet *pkt)
 {
         usart.write_string("RX: ");
         usart.write(pkt->data, pkt->data_len);
-        usart.put('\n');
+        fprintf_P(&usart_stream, PSTR(" (%d)\n"), pkt->seq);
         LED_PORT.OUTTGL = LED_USR_2_PIN_bm;
 }
 
@@ -143,6 +143,7 @@ void init(void)
         usart.set_rx_buffer(usart_rxbuf, USART_RX_BUF_SIZE);
         usart.begin(UART_BAUD_RATE);
         usart.setup_stream(&usart_stream);
+        stdout = &usart_stream;
         
         usart_n0.set_tx_buffer(usart_n0_txbuf, NODE_TX_BUF_SIZE);
         usart_n0.set_rx_buffer(usart_n0_rxbuf, NODE_RX_BUF_SIZE);

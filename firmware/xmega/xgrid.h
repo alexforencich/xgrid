@@ -73,6 +73,8 @@ extern char   __BUILD_NUMBER;
 #define XGRID_STATE_FW_TX       0x20
 #define XGRID_STATE_FW_RX       0x28
 
+#define DEBUG
+
 // Xgrid class
 class Xgrid
 {
