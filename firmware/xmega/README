@@ -1,7 +1,12 @@
-avr-xgrid
+XGrid
+
+AVR XMEGA Grid Computing
+
+For more information and updates:
+http://alexforencich.com/wiki/en/xgrid/start
 
 GitHub repository:
-https://github.com/alexforencich/avr-xgrid
+https://github.com/alexforencich/xgrid
 
 Compiling (Linux)
 
