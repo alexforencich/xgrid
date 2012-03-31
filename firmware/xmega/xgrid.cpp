@@ -553,7 +553,7 @@ void Xgrid::process()
                 {
 #ifdef DEBUG
                         printf_P(PSTR("timeout!\n"));
-#endif DEBUG
+#endif // DEBUG
                         firmware_offset = 0;
                         state = XGRID_STATE_IDLE;
                 }
@@ -569,7 +569,7 @@ void Xgrid::process()
         {
 #ifdef DEBUG
                 printf_P(PSTR("init, send flush command\n"));
-#endif DEBUG
+#endif // DEBUG
                 pkt.type = XGRID_PKT_FLUSH_COMPARE_BUFFER;
                 pkt.flags = 0;
                 pkt.radius = 1;
@@ -586,7 +586,7 @@ void Xgrid::process()
         {
 #ifdef DEBUG
                 printf_P(PSTR("idle, send version check\n"));
-#endif DEBUG
+#endif // DEBUG
                 // if we're idle, send a ping request
                 // to get neighbor firmware information
                 pkt.type = XGRID_PKT_PING_REQUEST;
@@ -605,7 +605,7 @@ void Xgrid::process()
         {
 #ifdef DEBUG
                 printf_P(PSTR("check neighbor versions\n"));
-#endif DEBUG
+#endif // DEBUG
                 // check versions every 30 seconds
                 // at 1 kHz tick rate
                 delay = 30*1000;
@@ -615,14 +615,14 @@ void Xgrid::process()
                 
 #ifdef DEBUG
                 printf_P(PSTR("update check %ld\n"), build_number);
-#endif DEBUG
+#endif // DEBUG
                 
                 // check detected revisions
                 for (uint8_t n = 0; n < node_cnt; n++)
                 {
 #ifdef DEBUG
                         printf_P(PSTR("node %d: %ld (%04x)\n"), n, nodes[n].build, nodes[n].crc);
-#endif DEBUG
+#endif // DEBUG
                         if (nodes[n].build > 0 && nodes[n].build < build_number)
                         {
                                 update_node_mask |= (1 << n);
@@ -640,7 +640,7 @@ void Xgrid::process()
                 {
 #ifdef DEBUG
                         printf_P(PSTR("send start update command\n"));
-#endif DEBUG
+#endif // DEBUG
                         // send start update command
                         uint8_t buffer[11];
                         //xgrid_pkt_maint_cmd_t *c = (xgrid_pkt_maint_cmd_t *)buffer;
@@ -686,7 +686,7 @@ void Xgrid::process()
                 {
 #ifdef DEBUG
                         printf_P(PSTR("send firmware block\n"));
-#endif DEBUG
+#endif // DEBUG
                         // send flash block
                         
                         uint8_t buffer[SPM_PAGESIZE+2];
@@ -724,7 +724,7 @@ void Xgrid::process()
                 {
 #ifdef DEBUG
                         printf_P(PSTR("finished sending firmware\n"));
-#endif DEBUG
+#endif // DEBUG
                         // send finish update command
                         uint8_t buffer[5];
                         xgrid_pkt_maint_cmd_t *c = (xgrid_pkt_maint_cmd_t *)buffer;
@@ -789,7 +789,7 @@ void Xgrid::internal_process_packet(Packet *pkt)
         {
 #ifdef DEBUG
                 printf_P(PSTR("rx ping req\n"));
-#endif DEBUG
+#endif // DEBUG
                 xgrid_pkt_ping_reply_t d;
                 d.build = build_number;
                 d.crc = firmware_crc;
@@ -807,7 +807,7 @@ void Xgrid::internal_process_packet(Packet *pkt)
         {
 #ifdef DEBUG
                 printf_P(PSTR("rx ping reply\n"));
-#endif DEBUG
+#endif // DEBUG
                 xgrid_pkt_ping_reply_t *d = (xgrid_pkt_ping_reply_t *)(pkt->data);
                 
                 nodes[pkt->rx_node].build = d->build;
@@ -817,7 +817,7 @@ void Xgrid::internal_process_packet(Packet *pkt)
         {
 #ifdef DEBUG
                 printf_P(PSTR("rx maint cmd\n"));
-#endif DEBUG
+#endif // DEBUG
                 xgrid_pkt_maint_cmd_t *c = (xgrid_pkt_maint_cmd_t *)(pkt->data);
                 
                 if (c->cmd == XGRID_CMD_START_UPDATE && c->magic == XGRID_CMD_UPDATE_MAGIC &&
@@ -825,7 +825,7 @@ void Xgrid::internal_process_packet(Packet *pkt)
                 {
 #ifdef DEBUG
                         printf_P(PSTR("start update\n"));
-#endif DEBUG
+#endif // DEBUG
                         // start update
                         firmware_offset = 0;
                         
@@ -849,7 +849,7 @@ void Xgrid::internal_process_packet(Packet *pkt)
                 {
 #ifdef DEBUG
                         printf_P(PSTR("finish update\n"));
-#endif DEBUG
+#endif // DEBUG
                         // check and install firmware
                         
                         uint16_t cur_crc;
@@ -859,13 +859,13 @@ void Xgrid::internal_process_packet(Packet *pkt)
 #ifdef DEBUG
                         printf_P(PSTR("new crc: %04x\n"), new_crc);
                         printf_P(PSTR("cur crc: %04x\n"), cur_crc);
-#endif DEBUG
+#endif // DEBUG
                         
                         if (cur_crc == new_crc)
                         {
 #ifdef DEBUG
                                 printf_P(PSTR("good crc\n"));
-#endif DEBUG
+#endif // DEBUG
                                 firmware_crc = new_crc;
                                 build_number = new_build;
                                 firmware_offset = XB_APP_TEMP_START;
@@ -877,7 +877,7 @@ void Xgrid::internal_process_packet(Packet *pkt)
                         {
 #ifdef DEBUG
                                 printf_P(PSTR("bad crc\n"));
-#endif DEBUG
+#endif // DEBUG
                                 firmware_offset = 0;
                         }
                         
@@ -891,7 +891,7 @@ void Xgrid::internal_process_packet(Packet *pkt)
                 {
 #ifdef DEBUG
                         printf_P(PSTR("abort update\n"));
-#endif DEBUG
+#endif // DEBUG
                         // abort update (go back to idle)
                         firmware_offset = 0;
                         state = XGRID_STATE_IDLE;
@@ -900,7 +900,7 @@ void Xgrid::internal_process_packet(Packet *pkt)
                 {
 #ifdef DEBUG
                         printf_P(PSTR("reset\n"));
-#endif DEBUG
+#endif // DEBUG
                         xboot_reset();
                 }
         }
@@ -908,7 +908,7 @@ void Xgrid::internal_process_packet(Packet *pkt)
         {
 #ifdef DEBUG
                 printf_P(PSTR("rx firmware block\n"));
-#endif DEBUG
+#endif // DEBUG
                 if (state == XGRID_STATE_FW_RX && pkt->data_len == SPM_PAGESIZE+2)
                 {
                         xgrid_pkt_firmware_block_t *b = (xgrid_pkt_firmware_block_t *)(pkt->data);
@@ -922,7 +922,7 @@ void Xgrid::internal_process_packet(Packet *pkt)
         {
 #ifdef DEBUG
                 printf_P(PSTR("rx flush buffer\n"));
-#endif DEBUG
+#endif // DEBUG
                 memset(compare_buffer, 0, sizeof(xgrid_header_minimal_t) * XGRID_COMPARE_BUFFER_SIZE);
         }
         else
