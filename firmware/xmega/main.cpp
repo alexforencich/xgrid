@@ -61,8 +61,6 @@ char usart_n5_txbuf[NODE_TX_BUF_SIZE];
 char usart_n5_rxbuf[NODE_RX_BUF_SIZE];
 CREATE_USART(usart_n5, USART_N5_DEVICE_PORT);
 
-Usart *usart_n[6];
-
 Xgrid xgrid;
 
 // SPI
@@ -148,32 +146,26 @@ void init(void)
         usart_n0.set_tx_buffer(usart_n0_txbuf, NODE_TX_BUF_SIZE);
         usart_n0.set_rx_buffer(usart_n0_rxbuf, NODE_RX_BUF_SIZE);
         usart_n0.begin(NODE_BAUD_RATE);
-        usart_n[0] = &usart_n0;
         xgrid.add_node(&usart_n0);
         usart_n1.set_tx_buffer(usart_n1_txbuf, NODE_TX_BUF_SIZE);
         usart_n1.set_rx_buffer(usart_n1_rxbuf, NODE_RX_BUF_SIZE);
         usart_n1.begin(NODE_BAUD_RATE);
-        usart_n[1] = &usart_n1;
         xgrid.add_node(&usart_n1);
         usart_n2.set_tx_buffer(usart_n2_txbuf, NODE_TX_BUF_SIZE);
         usart_n2.set_rx_buffer(usart_n2_rxbuf, NODE_RX_BUF_SIZE);
         usart_n2.begin(NODE_BAUD_RATE);
-        usart_n[2] = &usart_n2;
         xgrid.add_node(&usart_n2);
         usart_n3.set_tx_buffer(usart_n3_txbuf, NODE_TX_BUF_SIZE);
         usart_n3.set_rx_buffer(usart_n3_rxbuf, NODE_RX_BUF_SIZE);
         usart_n3.begin(NODE_BAUD_RATE);
-        usart_n[3] = &usart_n3;
         xgrid.add_node(&usart_n3);
         usart_n4.set_tx_buffer(usart_n4_txbuf, NODE_TX_BUF_SIZE);
         usart_n4.set_rx_buffer(usart_n4_rxbuf, NODE_RX_BUF_SIZE);
         usart_n4.begin(NODE_BAUD_RATE);
-        usart_n[4] = &usart_n4;
         xgrid.add_node(&usart_n4);
         usart_n5.set_tx_buffer(usart_n5_txbuf, NODE_TX_BUF_SIZE);
         usart_n5.set_rx_buffer(usart_n5_rxbuf, NODE_RX_BUF_SIZE);
         usart_n5.begin(NODE_BAUD_RATE);
-        usart_n[5] = &usart_n5;
         xgrid.add_node(&usart_n5);
         
         // ADC setup
