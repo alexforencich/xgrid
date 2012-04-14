@@ -43,6 +43,9 @@
 #define PACKED_ATTR __packed__
 #endif
 
+// flags
+#define XGRID_PKT_FLAG_TRACE    0x10
+
 // packet types
 // general purpose
 #define XGRID_PKT_DEBUG 0xFF
