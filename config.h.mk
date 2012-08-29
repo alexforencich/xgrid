@@ -5,7 +5,7 @@ config.h: config.mk
 	@echo "// MCU: $(MCU)" >> config.h
 	@echo "// F_CPU: $(F_CPU)" >> config.h
 	@echo >> config.h
-	$(foreach v, \
+	@$(foreach v, \
 	$(sort $(filter-out USE_CONFIG_H, $(filter \
 				ATTACH_% \
 				ENABLE_% \
@@ -16,4 +16,7 @@ config.h: config.mk
 				UART_% \
 				USE_% \
 				WATCHDOG_%, $(.VARIABLES)))), \
-	echo "#define $(v) $($(v))" >> config.h;) 
+	if [[ "$($(v))" == "y" || "$($(v))" == "yes" ]] ; then \
+	echo "#define $(v)" >> config.h ; \
+	elif [[ -n "$($(v))" && "$($(v))" != "n" && "$($(v))" != "no" ]] ; then \
+	echo "#define $(v) $($(v))" >> config.h ; fi ;)
