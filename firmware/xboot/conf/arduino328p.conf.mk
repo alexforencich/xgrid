@@ -48,26 +48,26 @@ AVRDUDE_FUSES =
 
 # Entry
 USE_ENTER_DELAY = yes
-#USE_ENTER_PIN = yes
+USE_ENTER_PIN = no
 USE_ENTER_UART = yes
-#USE_ENTER_I2C = yes
-#USE_ENTER_FIFO = yes
+USE_ENTER_I2C = no
+USE_ENTER_FIFO = no
 
 # Exit
-#LOCK_SPM_ON_EXIT = yes
+LOCK_SPM_ON_EXIT = no
 
 # Communication
 USE_LED = yes
 USE_UART = yes
-#USE_UART_EN_PIN = yes
-#USE_I2C = yes
-#USE_I2C_ADDRESS_NEGOTIATION = yes
-#USE_ATTACH_LED = yes
-#USE_FIFO = yes
+USE_UART_EN_PIN = no
+USE_I2C = no
+USE_I2C_ADDRESS_NEGOTIATION = no
+USE_ATTACH_LED = no
+USE_FIFO = no
 
 # General Options
-#USE_INTERRUPTS = yes
-#USE_WATCHDOG = yes
+USE_INTERRUPTS = no
+USE_WATCHDOG = no
 
 # Bootloader Features
 ENABLE_BLOCK_SUPPORT = yes
@@ -86,9 +86,9 @@ ENABLE_API_SPM_WRAPPER = yes
 ENABLE_API_FIRMWARE_UPDATE = yes
 
 # Code Protection
-#ENABLE_CODE_PROTECTION = yes
-#ENABLE_EEPROM_PROTECTION = yes
-#ENABLE_BOOTLOADER_PROTECTION = yes
+ENABLE_CODE_PROTECTION = no
+ENABLE_EEPROM_PROTECTION = no
+ENABLE_BOOTLOADER_PROTECTION = no
 
 # ENTER_PIN
 ENTER_PORT_NAME       = C
@@ -143,10 +143,10 @@ UART_EN_PIN_INV       = 0
 # FIFO
 FIFO_DATA_PORT_NAME   = C
 FIFO_CTL_PORT_NAME    = D
-FIFO_RXF_N_bm         = (1<<3)
-FIFO_TXE_N_bm         = (1<<2)
-FIFO_RD_N_bm          = (1<<1)
-FIFO_WR_N_bm          = (1<<0)
+FIFO_RXF_N            = 3
+FIFO_TXE_N            = 2
+FIFO_RD_N             = 1
+FIFO_WR_N             = 0
 FIFO_BIT_REVERSE      = yes
 
 # I2C
