@@ -913,7 +913,7 @@ void Xgrid::internal_process_packet(Packet *pkt)
                 {
                         xgrid_pkt_firmware_block_t *b = (xgrid_pkt_firmware_block_t *)(pkt->data);
                         
-                        xboot_app_temp_write_page(b->offset * SPM_PAGESIZE, b->data, 1);
+                        xboot_app_temp_write_page((uint32_t)b->offset * SPM_PAGESIZE, b->data, 1);
                         
                         timeout = 1000;
                 }
